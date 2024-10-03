@@ -1,0 +1,152 @@
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const basicAuth = require('basic-auth');
+const User = require('../models/User');
+const router = express.Router();
+
+// Regex for email validation
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordRegex = /^[^\s]{5,}$/; 
+const nameRegex = /^[^\s].*$/;
+
+// Utility function for basic auth
+const auth = async (req, res, next) => {
+    const credentials = basicAuth(req);
+    if (!credentials) {
+        return res.status(401).send('');
+    }
+
+    const user = await User.findOne({ where: { email: credentials.name } });
+    if (!user) {
+        return res.status(401).send('');
+    }
+
+    const validPassword = await bcrypt.compare(credentials.pass, user.password_hash);
+    if (!validPassword) {
+        return res.status(401).send('');
+    }
+
+    req.user = user;  
+    next();
+};
+
+// Create a new user (unauthenticated route)
+router.post('/v1/user', async (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
+    const { first_name, last_name, password, email } = req.body;
+
+    if (!first_name || !last_name || !password || !email) {
+        return res.status(400).send();
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ where: { email } });
+    if (existingUser) {
+        return res.status(400).send();
+    }
+
+    if (!nameRegex.test(first_name) || !nameRegex.test(last_name)) {
+        return res.status(400).send();
+    }
+
+    // Validate email format
+    if (!emailRegex.test(email)) {
+        return res.status(400).send();
+    }
+
+    if (!passwordRegex.test(password)) {
+        return res.status(400).send();
+    }
+
+    // Hash the password with bcrypt
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
+
+    // Create user in the database
+    const user = await User.create({
+        first_name,
+        last_name,
+        email,
+        password_hash
+    });
+
+    return res.status(201).json({
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        account_created: user.account_created,
+        account_updated: user.account_updated
+    });
+});
+
+// Get user information (authenticated route)
+router.get('/v1/user/self', auth, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
+    if (Object.keys(req.query).length !== 0 || req._body === true || req.header('Content-length') !== undefined){
+        return res.status(400).send(); 
+    }
+    const user = req.user;
+    return res.status(200).json({
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        account_created: user.account_created,
+        account_updated: user.account_updated
+    });
+});
+
+// Update user information (authenticated route)
+router.put('/v1/user/self', auth, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
+    const { first_name, last_name, password, email, account_created, account_updated } = req.body;
+    const user = req.user;
+
+    if (email && email !== user.email) {
+        return res.status(400).send();
+    }
+
+    if (account_created || account_updated) {
+        return res.status(400).send();
+    }
+
+    // Object to hold updated fields
+    const updatedFields = {};
+
+    // Conditionally add fields to be updated if they are provided
+    if (first_name) {
+        if (!nameRegex.test(first_name)) {
+            return res.status(400).send();
+        }
+        updatedFields.first_name = first_name;
+    }
+    if (last_name) {
+        if (!nameRegex.test(last_name)) {
+            return res.status(400).send();
+        }
+        updatedFields.last_name = last_name;
+    }
+    if (password) {
+        if (!passwordRegex.test(password)) {
+            return res.status(400).send();
+        }
+        const salt = await bcrypt.genSalt(10);
+        const password_hash = await bcrypt.hash(password, salt);
+        updatedFields.password_hash = password_hash;
+    }
+
+    // If no fields are provided, return 400
+    if (Object.keys(updatedFields).length === 0) {
+        return res.status(400).send();
+    }
+
+    // Update the user with the provided fields and set account_updated
+    updatedFields.account_updated = new Date();
+
+    await user.update(updatedFields);
+
+    return res.status(204).send();  // No content response
+});
+
+module.exports = router;
