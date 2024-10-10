@@ -1,22 +1,17 @@
 const request = require('supertest');
-const { app, startServer } = require('../app');
+const { app, startServer } = require('../app'); // Ensure your app has a startServer method
 const User = require('../models/User');
 const sequelize = require('../models/index');
 
-let server;
-// const PORT = process.env.PORT || 0;
-// beforeAll(async () => {
-//   server = await startServer(PORT);
-//   // Clear the users table before running tests
-//   await User.destroy({ where: {} });
-// });
 
-// afterAll(async () => {
-//   if (server) {
-//     await server.close();
-//   }
-//   await sequelize.close();
-// });
+beforeAll(async () => {
+  await User.destroy({ where: {} });
+  await sequelize.sync();
+});
+
+afterAll(async () => {
+  await sequelize.close(); 
+});
 
 describe('Health Check', () => {
   it('should return 200 when database is connected', async () => {
@@ -91,9 +86,7 @@ describe('User Routes', () => {
     });
 
     it('should return 401 for unauthenticated request', async () => {
-      const response = await request(app)
-        .get('/v1/user/self');
-
+      const response = await request(app).get('/v1/user/self');
       expect(response.statusCode).toBe(401);
     });
   });
@@ -129,3 +122,5 @@ describe('User Routes', () => {
     });
   });
 });
+
+
