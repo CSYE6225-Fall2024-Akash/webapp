@@ -16,12 +16,14 @@ jobs:
       mysql:
         image: mysql:5.7
         env:
-          MYSQL_DATABASE: ${{ secrets.DB_NAME }} 
-          MYSQL_USER: ${{ secrets.DB_USER }} 
-          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }} 
           MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
         ports:
           - '3306:3306'
+        options: >
+          --health-cmd='mysqladmin ping --silent'
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout code
@@ -35,6 +37,20 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Wait for MySQL to be ready
+        run: |
+          until mysqladmin ping --host=127.0.0.1 --port=3306 --silent; do
+            echo "Waiting for MySQL to be ready..."
+            sleep 5
+          done
+
+      - name: Create database and user
+        run: |
+          mysql --host=127.0.0.1 --port=3306 -u root -p${{ secrets.DB_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+          mysql --host=127.0.0.1 --port=3306 -u root -p${{ secrets.DB_PASSWORD }} -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';"
+          mysql --host=127.0.0.1 --port=3306 -u root -p${{ secrets.DB_PASSWORD }} -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'%';"
+          mysql --host=127.0.0.1 --port=3306 -u root -p${{ secrets.DB_PASSWORD }} -e "FLUSH PRIVILEGES;"
+
       - name: Run tests
         env:
           DB_NAME: ${{ secrets.DB_NAME }}
@@ -43,7 +59,4 @@ jobs:
           DB_HOST: ${{ vars.DB_HOST }}  
           DB_PORT: ${{ secrets.DB_PORT }} 
           PORT: ${{ vars.PORT }}        
-        run: |
-          echo "Waiting for MySQL to be ready..."
-          sleep 5
-          npm test
+        run: npm test
