@@ -3,7 +3,7 @@ name: CI for Node.js Web App
 on:
   push:
     branches:
-      - '*'
+      - 'A03/workflow'
   pull_request:
     branches:
       - main
