@@ -11,7 +11,7 @@ const config = {
         logging: false 
     },
     server: {
-        port: process.env.PORT
+        port: process.env.PORT || 3000
     }
 
     

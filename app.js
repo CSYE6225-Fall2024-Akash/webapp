@@ -57,8 +57,9 @@ const startServer = async () => {
 
     } catch (error) {
         console.error(error);
-        process.exit(1);
     }
 };
 
 startServer();
+
+module.exports = { app, startServer };
