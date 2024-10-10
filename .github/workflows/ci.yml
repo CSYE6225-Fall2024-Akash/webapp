@@ -42,7 +42,7 @@ jobs:
               break
             fi
             echo "Waiting for MySQL..."
-            sleep 5
+            sleep 15
           done
 
       - name: Run Tests
