@@ -15,19 +15,22 @@ jobs:
     services:
       mysql:
         image: mysql:5.7
-        env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
         ports:
-          - '3306:3306'
+          - 3306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_ROOT_PASSWORD }} 
+          MYSQL_DATABASE: userdb                               
+          MYSQL_USER: akasha03                                
+          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }} 
         options: >
-          --health-cmd='mysqladmin ping --silent'
-          --health-interval=10s
-          --health-timeout=5s
+          --health-cmd="mysqladmin ping --silent" 
+          --health-interval=10s 
+          --health-timeout=5s 
           --health-retries=5
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -37,26 +40,21 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Wait for MySQL to be ready
+      - name: Wait for MySQL to be healthy
         run: |
-          until mysqladmin ping --host=127.0.0.1 --port=3306 --silent; do
-            echo "Waiting for MySQL to be ready..."
+          for i in `seq 1 30`; do
+            if echo "SELECT 1" | mysql -h 127.0.0.1 -u${{ secrets.DB_USER }} -p${{ secrets.DB_PASSWORD }} userdb; then
+              break
+            fi
+            echo "Waiting for MySQL..."
             sleep 5
           done
 
-      - name: Create database and user
-        run: |
-          mysql --host=127.0.0.1 --port=3306 -u root -p${{ secrets.DB_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
-          mysql --host=127.0.0.1 --port=3306 -u root -p${{ secrets.DB_PASSWORD }} -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${DB_PASSWORD}';"
-          mysql --host=127.0.0.1 --port=3306 -u root -p${{ secrets.DB_PASSWORD }} -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'%';"
-          mysql --host=127.0.0.1 --port=3306 -u root -p${{ secrets.DB_PASSWORD }} -e "FLUSH PRIVILEGES;"
-
-      - name: Run tests
+      - name: Run Tests
         env:
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: userdb
+          DB_USER: akasha03
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_HOST: ${{ vars.DB_HOST }}  
-          DB_PORT: ${{ secrets.DB_PORT }} 
-          PORT: ${{ vars.PORT }}        
         run: npm test
