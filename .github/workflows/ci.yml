@@ -35,15 +35,15 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Wait for MySQL to be healthy
-        run: |
-          for i in `seq 1 30`; do
-            if echo "SELECT 1" | mysql -h 127.0.0.1 -u${{ secrets.DB_USER }} -p${{ secrets.DB_PASSWORD }} userdb; then
-              break
-            fi
-            echo "Waiting for MySQL..."
-            sleep 15
-          done
+      # - name: Wait for MySQL to be healthy
+      #   run: |
+      #     for i in `seq 1 30`; do
+      #       if echo "SELECT 1" | mysql -h 127.0.0.1 -u${{ secrets.DB_USER }} -p${{ secrets.DB_PASSWORD }} userdb; then
+      #         break
+      #       fi
+      #       echo "Waiting for MySQL..."
+      #       sleep 15
+      #     done
 
       - name: Run Tests
         env:
