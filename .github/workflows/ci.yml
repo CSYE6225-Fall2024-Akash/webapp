@@ -3,7 +3,7 @@ name: CI for Node.js Web App
 on:
   push:
     branches:
-      - main
+      - A03/ci
   pull_request:
     branches:
       - main
@@ -45,5 +45,5 @@ jobs:
           PORT: ${{ vars.PORT }}        
         run: |
           echo "Waiting for MySQL to be ready..."
-          sleep 10
+          sleep 5
           npm test
