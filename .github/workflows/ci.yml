@@ -22,11 +22,6 @@ jobs:
           MYSQL_DATABASE: userdb                               
           MYSQL_USER: akasha03                                
           MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }} 
-        options: >
-          --health-cmd="mysqladmin ping --silent" 
-          --health-interval=10s 
-          --health-timeout=5s 
-          --health-retries=5
 
     steps:
       - name: Checkout code
