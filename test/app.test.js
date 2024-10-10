@@ -5,11 +5,12 @@ const sequelize = require('../models/index');
 
 
 beforeAll(async () => {
-  await User.destroy({ where: {} });
   await sequelize.sync();
 });
 
 afterAll(async () => {
+  
+  await User.destroy({ where: {} });
   await sequelize.close(); 
 });
 
