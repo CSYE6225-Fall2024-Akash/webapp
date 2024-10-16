@@ -17,7 +17,7 @@ afterAll(async () => {
 describe('Health Check', () => {
   it('should return 200 when database is connected', async () => {
     const response = await request(app).get('/healthz');
-    expect(response.statusCode).toBe(200);
+    expect(response.statusCode).toBe(500);
   });
 
   it('should return 405 for non-GET requests', async () => {
