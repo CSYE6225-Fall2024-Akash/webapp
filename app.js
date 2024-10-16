@@ -17,7 +17,6 @@ app.use('/healthz', async (req, res) => {
         return res.status(400).send();  // Respond with 400 Bad Request if payload is present
     }
 
-    // Ensure that only `/healthz` is checked and not sub-paths like `/healthz/*`
     if (req.path !== '/') {
         return res.status(404).send();  // Respond with 404 Not Found for invalid sub-paths
     }
