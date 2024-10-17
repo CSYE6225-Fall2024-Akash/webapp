@@ -1,0 +1,66 @@
+name: AWS Packer Build and NPM Test
+run-name: NPM Test and Packer Build for AWS
+env:
+  DB_USER: ${{secrets.DB_USER}}
+  DB_PASSWORD: ${{secrets.DB_PASSWORD}}
+  NODE_PORT: ${{secrets.NODE_PORT}}
+  DB_NAME: ${{secrets.DB_NAME}}
+  region: ${{secrets.REGION}}
+  source_ami: ${{vars.SOURCE_AMI_ID}}
+  ssh_username: ${{vars.SSH_USERNAME}}
+  vpc_id: ${{vars.VPC_ID}}
+  subnet_id: ${{vars.SUBNET_ID}}
+  ami_users: ${{vars.AMI_USERS}}
+
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+jobs:
+  npm-test-and-packer-build:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup MySQL
+        run: |
+          sudo service mysql start
+          mysql -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.DB_NAME }};" -u${{ secrets.DB_USERNAME }} -p${{ secrets.DB_PASSWORD }}
+
+      - uses: actions/checkout@v4
+
+      - name: Installing NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 21.3.0
+
+      - name: Installing Dependencies
+        run: npm ci
+
+      - name: Run test
+        run: npm test
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: 1.10.1
+
+      - name: Packer init
+        run: packer init .
+
+      - name: Packer validate
+        run: packer validate .
+
+      - name: Build the packer image
+        run: |
+          packer build .
