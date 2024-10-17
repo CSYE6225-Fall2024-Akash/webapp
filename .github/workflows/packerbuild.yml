@@ -125,8 +125,9 @@ jobs:
         run: packer init packer/packer.pkr.hcl
 
       - name: Build Packer Image
+        working-directory: ${{ github.workspace }}/packer
         run: |
-          packer build packer/packer.pkr.hcl
+          packer build .
 
       - name: Clean up
         if: always()
