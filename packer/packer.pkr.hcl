@@ -80,7 +80,7 @@ variable "ami_users" {
 }
 
 source "amazon-ebs" "my-ami" {
-  ami_name        = "csye6225_${formatdate("YYYY_MM_DD_hh_mm_ss", timestamp())}"
+  ami_name      = "csye6225_${formatdate("YYYY_MM_DD_hh_mm_ss", timestamp())}"
   source_ami    = var.source_ami_id
   instance_type = "t2.small"
   region        = var.region
@@ -95,7 +95,7 @@ source "amazon-ebs" "my-ami" {
     volume_size           = 8
     volume_type           = "gp2"
   }
-  
+
 }
 
 
@@ -106,25 +106,25 @@ build {
     "source.amazon-ebs.my-ami"
   ]
 
-  
+
 
   provisioner "shell" {
     inline = [
       "sudo mkdir -p /opt/webapp",
       "sudo chown ubuntu:ubuntu /opt/webapp"
     ]
-  } 
+  }
 
   provisioner "file" {
     source      = "../../webapp/"
     destination = "/opt/webapp"
   }
 
-  
+
 
   provisioner "shell" {
 
-    script =  "scripts/setup.sh"
+    script = "scripts/setup.sh"
     environment_vars = [
       "DB_NAME=${var.DB_NAME}",
       "DB_USER=${var.DB_USER}",
