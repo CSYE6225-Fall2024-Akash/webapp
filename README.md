@@ -12,6 +12,7 @@ Authenticated Operations:
 1. GET /v1/user/self
 2. PUT /v1/user/self
 
+
 ### Steps to Clone and Run the Project
 
 1. Clone the repository/ Download the zip from canvas and unzip it
@@ -19,3 +20,5 @@ Authenticated Operations:
 3. Install dependencies
 4. Set up environment variables
 5. Start the server
+
+
