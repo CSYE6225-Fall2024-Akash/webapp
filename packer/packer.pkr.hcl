@@ -73,10 +73,9 @@ variable "ssh_username" {
   description = "SSH username for connecting to the instance"
 }
 
-variable "ami_users" {
-  type        = list(string)
-  default     = null
-  description = "Comma-separated list of account IDs that can access the AMI"
+variable "demo_acc_id" {
+  type    = string
+  default = "340752837329"
 }
 
 source "amazon-ebs" "my-ami" {
@@ -85,7 +84,7 @@ source "amazon-ebs" "my-ami" {
   instance_type = "t2.small"
   region        = var.region
   ssh_username  = var.ssh_username
-  ami_users     = var.ami_users
+  ami_users     = [var.demo_acc_id]
   vpc_id        = var.vpc_id
   subnet_id     = var.subnet_id
 
