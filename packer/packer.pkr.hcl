@@ -124,7 +124,7 @@ build {
 
   provisioner "shell" {
 
-    script = "./setup.sh"
+    script = "packer/setup.sh"
     environment_vars = [
       "DB_NAME=${var.DB_NAME}",
       "DB_USER=${var.DB_USER}",
