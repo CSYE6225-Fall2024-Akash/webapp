@@ -28,14 +28,14 @@ jobs:
           aws-region: ${{ secrets.REGION }}
           
       - name: Packer init
-        run: packer init packer.pkr.hcl
+        run: packer init packer/packer.pkr.hcl
 
       - name: Packer fmt check
-        run: packer fmt -check packer.pkr.hcl
+        run: packer fmt -check packer/packer.pkr.hcl
 
       
 
       - name: Packer validate
-        run: packer validate packer.pkr.hcl
+        run: packer validate packer/packer.pkr.hcl
 
 
