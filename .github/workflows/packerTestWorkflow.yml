@@ -1,0 +1,42 @@
+name: AWS Packer Build and Validate
+run-name: Initialize Packer, Validate, and Build AMI
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+    branches:
+      - main
+
+jobs:
+  packer-fmt-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: 1.10.1
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.REGION }}
+          
+      - name: Packer init
+        run: packer init packer/packer.pkr.hcl
+
+      - name: Packer fmt check
+        run: packer fmt -check packer/packer.pkr.hcl
+
+      
+
+      - name: Packer validate
+        working-directory: ./packer
+        run: packer validate .
+
+
