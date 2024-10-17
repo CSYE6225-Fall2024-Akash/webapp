@@ -122,11 +122,9 @@ jobs:
           path: webapp
 
       - name: Initialize Packer
-        working-directory: ./packers
         run: packer init .
 
       - name: Build Packer Image
-        working-directory: ./packers
         run: |
           packer build packer.pkr.hcl
 
