@@ -74,8 +74,8 @@ variable "ssh_username" {
 }
 
 variable "demo_acc_id" {
-  type        = string
-  default     = "340752837329"
+  type    = string
+  default = "340752837329"
 }
 
 source "amazon-ebs" "my-ami" {
