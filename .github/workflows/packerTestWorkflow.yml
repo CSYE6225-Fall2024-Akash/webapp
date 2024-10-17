@@ -36,6 +36,7 @@ jobs:
       
 
       - name: Packer validate
-        run: packer validate packer/packer.pkr.hcl
+        working-directory: ./packer
+        run: packer validate .
 
 
