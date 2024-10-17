@@ -1,9 +1,6 @@
 name: CI for Node.js Web App
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
