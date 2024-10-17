@@ -122,11 +122,11 @@ jobs:
           path: webapp
 
       - name: Initialize Packer
-        run: packer init .
+        run: packer init packer/packer.pkr.hcl
 
       - name: Build Packer Image
         run: |
-          packer build packer.pkr.hcl
+          packer build packer/packer.pkr.hcl
 
       - name: Clean up
         if: always()
