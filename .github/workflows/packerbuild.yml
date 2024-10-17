@@ -21,7 +21,7 @@ on:
       - main
 
 jobs:
-  npm-test-and-packer-build:
+  npm-test:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
@@ -69,7 +69,7 @@ jobs:
         run: npm test
 
   create_artifact:
-    needs: integration_test
+    needs: npm-test
     name: Create Application Artifact
     runs-on: ubuntu-latest
 
