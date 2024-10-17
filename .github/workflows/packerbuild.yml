@@ -68,24 +68,68 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: npm test
 
+  create_artifact:
+    needs: integration_test
+    name: Create Application Artifact
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env file
+        run: |
+          echo "PORT=${{ vars.PORT }}" >> .env
+          echo "DB_HOST=${{ vars.DB_HOST }}" >> .env
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+
+      - name: Create artifact
+        run: |
+          mkdir -p artifact
+          cp -R models routes app.js config.js package-lock.json package.json .env artifact/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: webapp
+          path: artifact
+
+  packer_build:
+    needs: create_artifact
+    name: Build Packer Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ secrets.REGION }}
 
-      - name: Install Packer
+      - name: Setup Packer
         uses: hashicorp/setup-packer@main
-        with:
-          version: 1.10.1
 
-      - name: Packer init
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: webapp
+          path: webapp
+
+      - name: Initialize Packer
+        working-directory: ./packers
         run: packer init .
 
-      - name: Packer validate
-        run: packer validate .
-
-      - name: Build the packer image
+      - name: Build Packer Image
+        working-directory: ./packers
         run: |
-          packer build .
+          packer build packer.pkr.hcl
+
+      - name: Clean up
+        if: always()
+        run: rm -rf webapp
