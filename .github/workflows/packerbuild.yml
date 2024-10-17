@@ -28,7 +28,7 @@ jobs:
       - name: Setup MySQL
         run: |
           sudo service mysql start
-          mysql -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.DB_NAME }};" -u${{ secrets.DB_USERNAME }} -p${{ secrets.DB_PASSWORD }}
+          mysql -e "CREATE DATABASE IF NOT EXISTS ${{ secrets.DB_NAME }};" -u${{ secrets.DB_USER }} -p${{ secrets.DB_PASSWORD }}
 
       - uses: actions/checkout@v4
 
