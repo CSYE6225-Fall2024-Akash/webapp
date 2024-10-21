@@ -83,7 +83,7 @@ source "amazon-ebs" "my-ami" {
   source_ami    = var.source_ami_id
   instance_type = "t2.small"
   region        = var.region
-  ssh_username  = var.ssh_username
+  ssh_username  =   var.ssh_username
   ami_users     = [var.demo_acc_id]
   vpc_id        = var.vpc_id
   subnet_id     = var.subnet_id
