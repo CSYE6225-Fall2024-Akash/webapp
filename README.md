@@ -21,4 +21,6 @@ Authenticated Operations:
 4. Set up environment variables
 5. Start the server
 
+6. akash
+
 
