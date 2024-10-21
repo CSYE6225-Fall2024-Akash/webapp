@@ -85,7 +85,7 @@ source "amazon-ebs" "my-ami" {
   region        = var.region
   ssh_username  =   var.ssh_username
   ami_users     = [var.demo_acc_id]
-  vpc_id        = var.vpc_id
+  vpc_id        = var.bad
   subnet_id     = var.subnet_id
 
   launch_block_device_mappings {
