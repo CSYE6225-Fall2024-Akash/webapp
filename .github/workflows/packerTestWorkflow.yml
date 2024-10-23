@@ -1,6 +1,9 @@
-name: AWS Packer Build and Validate
-run-name: Initialize Packer, Validate, and Build AMI
+name: Packer Format and Validate
+run-name: Initialize Packer, Validate
 on:
+  push:
+    branches:
+      - A05/webappp
   pull_request:
     types:
       - opened
