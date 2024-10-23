@@ -83,8 +83,8 @@ Type=simple
 User=csye6225
 Group=csye6225
 WorkingDirectory=/opt/webapp/webapp
-EnvironmentFile=/opt/webapp/webapp.env
-ExecStart=/usr/bin/node /opt/webapp/app.js
+EnvironmentFile=/opt/webapp/webapp/.env
+ExecStart=/usr/bin/node /opt/webapp/webapp/app.js
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
@@ -96,6 +96,7 @@ SyslogIdentifier=webapp
 WantedBy=multi-user.target
 EOF
 
+sudo chmod 644 /opt/webapp/webapp/.env
 # Set correct permissions for app.service
 sudo chmod 644 /etc/systemd/system/app.service
 
