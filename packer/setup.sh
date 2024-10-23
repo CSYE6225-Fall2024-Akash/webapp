@@ -95,7 +95,6 @@ SyslogIdentifier=webapp
 WantedBy=multi-user.target
 EOF
 
-sudo chmod 644 /opt/webapp/webapp/.env
 # Set correct permissions for app.service
 sudo chmod 644 /etc/systemd/system/app.service
 
