@@ -82,7 +82,7 @@ After=network.target
 Environment=DB_NAME=$DB_NAME
 Environment=DB_USER=$DB_USER
 Environment=DB_PASSWORD=$DB_PASSWORD
-Environment=DB_ROOT_PASSWORD=$DB_ROOT_PASSWORD
+Environment=NODE_PORT=${NODE_PORT}
 Type=simple
 User=csye6225
 Group=csye6225
@@ -108,8 +108,8 @@ sudo systemctl daemon-reload
 # Enable the service to start on boot
 sudo systemctl enable app.service
 
-# # Start the service
-# sudo systemctl start app.service
+# Start the service
+sudo systemctl start app.service
 
 sudo systemctl status app.service
 
