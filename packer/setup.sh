@@ -79,14 +79,11 @@ Description=Web Application Service
 After=network.target
 
 [Service]
-Environment=DB_NAME=$DB_NAME
-Environment=DB_USER=$DB_USER
-Environment=DB_PASSWORD=$DB_PASSWORD
-Environment=NODE_PORT=${NODE_PORT}
 Type=simple
 User=csye6225
 Group=csye6225
 WorkingDirectory=/opt/webapp
+EnvironmentFile=/opt/webapp/webapp.env
 ExecStart=/usr/bin/node /opt/webapp/app.js
 Restart=on-failure
 RestartSec=10
