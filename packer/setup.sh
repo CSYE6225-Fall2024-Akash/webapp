@@ -105,10 +105,6 @@ sudo systemctl daemon-reload
 # Enable the service to start on boot
 sudo systemctl enable app.service
 
-# Start the service
-sudo systemctl start app.service
-
-sudo systemctl status app.service
 
 echo "Application setup completed"
 
