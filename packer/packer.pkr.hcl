@@ -115,7 +115,7 @@ build {
   }
 
   provisioner "file" {
-    source      = "../../webapp_fork/"
+    source      = "../../webapp/"
     destination = "/opt/webapp"
   }
 
