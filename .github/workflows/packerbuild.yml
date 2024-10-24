@@ -84,11 +84,15 @@ jobs:
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
           echo "DB_USER=${{ secrets.DB_USER }}" >> .env
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          ls -la .env  # Verify .env was created
+          cat .env 
 
       - name: Create artifact
         run: |
           mkdir -p artifact
           cp -R models routes app.js config.js package-lock.json package.json .env artifact/
+          ls -la artifact/  # List all files in artifact directory
+          ls -la artifact/.env  # Specifically check for .env
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3

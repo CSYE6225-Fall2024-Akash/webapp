@@ -20,42 +20,35 @@ node -version
 npm --version
 fi
 
-sudo apt install curl mysql-server -y
+# sudo apt install curl mysql-server -y
 
-sudo systemctl enable mysql
-sudo systemctl start mysql
+# sudo systemctl enable mysql
+# sudo systemctl start mysql
 
-# MySQL secure installation and setup
+# # MySQL secure installation and setup
 
-echo "DB_NAME: ${DB_NAME}"
-echo "DB_USER: ${DB_USER}"
-echo "DB_PASSWORD: ${DB_PASSWORD}"
+# echo "DB_NAME: ${DB_NAME}"
+# echo "DB_USER: ${DB_USER}"
+# echo "DB_PASSWORD: ${DB_PASSWORD}"
 
+# cat <<EOF > my.cnf
+# [client]
+# user=root
+# password=$DB_ROOT_PASSWORD
+# EOF
 
-# sudo mysql -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
-# sudo mysql -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';"
-# sudo mysql -e "GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';"
-# sudo mysql -e "FLUSH PRIVILEGES;"
+# sudo mysql --defaults-file=my.cnf <<EOF
+# SHOW DATABASES;
+# CREATE DATABASE $DB_NAME;
+# CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
+# GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
+# FLUSH PRIVILEGES;
+# SHOW DATABASES;
+# EOF
 
-# Create a temporary config file for MySQL
-cat <<EOF > my.cnf
-[client]
-user=root
-password=$DB_ROOT_PASSWORD
-EOF
+# rm -f my.cnf
 
-sudo mysql --defaults-file=my.cnf <<EOF
-SHOW DATABASES;
-CREATE DATABASE $DB_NAME;
-CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
-GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
-FLUSH PRIVILEGES;
-SHOW DATABASES;
-EOF
-
-rm -f my.cnf
-
-echo "MySQL installation and setup completed"
+# echo "MySQL installation and setup completed"
 
 # Creating a group only if it doesn't already exist
 sudo groupadd csye6225
@@ -86,15 +79,12 @@ Description=Web Application Service
 After=network.target
 
 [Service]
-Environment=DB_NAME=$DB_NAME
-Environment=DB_USER=$DB_USER
-Environment=DB_PASSWORD=$DB_PASSWORD
-Environment=DB_ROOT_PASSWORD=$DB_ROOT_PASSWORD
 Type=simple
 User=csye6225
 Group=csye6225
-WorkingDirectory=/opt/webapp
-ExecStart=/usr/bin/node /opt/webapp/app.js
+WorkingDirectory=/opt/webapp/webapp
+EnvironmentFile=/opt/webapp/webapp/.env
+ExecStart=/usr/bin/node /opt/webapp/webapp/app.js
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
@@ -106,10 +96,6 @@ SyslogIdentifier=webapp
 WantedBy=multi-user.target
 EOF
 
-
-
-
-
 # Set correct permissions for app.service
 sudo chmod 644 /etc/systemd/system/app.service
 
@@ -119,10 +105,6 @@ sudo systemctl daemon-reload
 # Enable the service to start on boot
 sudo systemctl enable app.service
 
-# Start the service
-sudo systemctl start app.service
-
-sudo systemctl status app.service
 
 echo "Application setup completed"
 
