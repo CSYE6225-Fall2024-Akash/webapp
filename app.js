@@ -1,6 +1,7 @@
 const express = require('express');
 const sequelize = require('./models/index');
 const userRoutes = require('./routes/user');
+const imageRoutes = require('./routes/image');
 const app = express();
 const config = require('./config');
 
@@ -33,6 +34,7 @@ app.use('/healthz', async (req, res) => {
 
 
 app.use(userRoutes);
+app.use(imageRoutes);
 
 app.use((req, res) => {
     if (req.path !== '/healthz') {

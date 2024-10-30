@@ -20,35 +20,10 @@ node -version
 npm --version
 fi
 
-# sudo apt install curl mysql-server -y
-
-# sudo systemctl enable mysql
-# sudo systemctl start mysql
-
-# # MySQL secure installation and setup
-
-# echo "DB_NAME: ${DB_NAME}"
-# echo "DB_USER: ${DB_USER}"
-# echo "DB_PASSWORD: ${DB_PASSWORD}"
-
-# cat <<EOF > my.cnf
-# [client]
-# user=root
-# password=$DB_ROOT_PASSWORD
-# EOF
-
-# sudo mysql --defaults-file=my.cnf <<EOF
-# SHOW DATABASES;
-# CREATE DATABASE $DB_NAME;
-# CREATE USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASSWORD';
-# GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
-# FLUSH PRIVILEGES;
-# SHOW DATABASES;
-# EOF
-
-# rm -f my.cnf
-
-# echo "MySQL installation and setup completed"
+# Install CloudWatch Agent
+wget https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
+rm amazon-cloudwatch-agent.deb
 
 # Creating a group only if it doesn't already exist
 sudo groupadd csye6225
@@ -98,6 +73,10 @@ EOF
 
 # Set correct permissions for app.service
 sudo chmod 644 /etc/systemd/system/app.service
+
+# Enable CloudWatch Agent service
+sudo systemctl enable amazon-cloudwatch-agent
+
 
 # Reload systemd to recognize the new service
 sudo systemctl daemon-reload

@@ -1,5 +1,5 @@
 const request = require('supertest');
-const { app, startServer } = require('../app'); // Ensure your app has a startServer method
+const { app, startServer } = require('../app'); 
 const User = require('../models/User');
 const sequelize = require('../models/index');
 

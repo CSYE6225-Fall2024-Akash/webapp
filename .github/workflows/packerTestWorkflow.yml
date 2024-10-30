@@ -1,12 +1,15 @@
 name: Packer Format and Validate
 run-name: Initialize Packer, Validate
 on:
-  pull_request:
-    types:
-      - opened
-      - reopened
+  push:
     branches:
-      - main
+      - A06/test
+  # pull_request:
+  #   types:
+  #     - opened
+  #     - reopened
+  #   branches:
+  #     - main
 
 jobs:
   packer-fmt-and-validate:
