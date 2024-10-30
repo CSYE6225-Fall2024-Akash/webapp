@@ -25,13 +25,29 @@ const upload = multer({
     }
 });
 
+const uploadMiddleware = (req, res, next) => {
+    upload(req, res, function(err) {
+        console.log('Request headers:', req.headers); // Debug log
+        console.log('Request file:', req.file); // Debug log
+
+        if (err instanceof multer.MulterError) {
+            console.error('Multer error:', err);
+            return res.status(400).send();
+        } else if (err) {
+            console.error('Upload error:', err);
+            return res.status(400).send();
+        }
+        next();
+    });
+};
+
 // Add profile picture
 router.post('/v1/user/self/pic', auth, upload.single('profilePic'), async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');
 
     try {
         if (!req.file) {
-            return res.status(400).send();
+            return res.status(400).send("No file");
         }
 
         // Check if user already has a profile picture
@@ -40,7 +56,7 @@ router.post('/v1/user/self/pic', auth, upload.single('profilePic'), async (req, 
         });
 
         if (existingImage) {
-            return res.status(400).send();
+            return res.status(400).send("exisiting image");
         }
 
         const fileExtension = path.extname(req.file.originalname);
@@ -70,7 +86,7 @@ router.post('/v1/user/self/pic', auth, upload.single('profilePic'), async (req, 
         });
     } catch (error) {
         console.error(error);
-        return res.status(400).send();
+        return res.status(400).send("Request processing error");
     }
 });
 
