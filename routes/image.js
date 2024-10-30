@@ -86,7 +86,7 @@ router.post('/v1/user/self/pic', auth, upload.single('profilePic'), async (req, 
         });
     } catch (error) {
         console.error(error);
-        return res.status(400).send("Request processing error");
+        return res.status(400).send("Req error");
     }
 });
 
