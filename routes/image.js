@@ -4,6 +4,8 @@ const AWS = require('aws-sdk');
 const path = require('path');
 const auth = require('../middleware/auth');
 const Image = require('../models/Image');
+const metrics = require('../utils/metrics');
+const logger = require('../utils/logger');
 const router = express.Router();
 
 // Configure S3
@@ -25,21 +27,6 @@ const upload = multer({
     }
 });
 
-const uploadMiddleware = (req, res, next) => {
-    upload(req, res, function(err) {
-        console.log('Request headers:', req.headers); // Debug log
-        console.log('Request file:', req.file); // Debug log
-
-        if (err instanceof multer.MulterError) {
-            console.error('Multer error:', err);
-            return res.status(400).send();
-        } else if (err) {
-            console.error('Upload error:', err);
-            return res.status(400).send();
-        }
-        next();
-    });
-};
 
 // Add profile picture
 router.post('/v1/user/self/pic', auth, upload.single('profilePic'), async (req, res) => {
@@ -47,35 +34,41 @@ router.post('/v1/user/self/pic', auth, upload.single('profilePic'), async (req, 
 
     try {
         if (!req.file) {
-            return res.status(400).send("No file");
+            return res.status(400).send();
         }
 
         // Check if user already has a profile picture
+        const dbTimer = metrics.dbTimer('find_existing_image');
         const existingImage = await Image.findOne({
             where: { user_id: req.user.id }
         });
+        dbTimer.end();
 
         if (existingImage) {
-            return res.status(400).send("exisiting image");
+            return res.status(400).send();
         }
 
         const fileExtension = path.extname(req.file.originalname);
         const key = `${req.user.id}${fileExtension}`;
 
-        // Upload to S3
+        // S3 operation timer
+        const s3Timer = metrics.s3Timer('upload_image');
         await s3.putObject({
             Bucket: process.env.S3_BUCKET_NAME,
             Key: key,
             Body: req.file.buffer,
             ContentType: req.file.mimetype
         }).promise();
+        s3Timer.end();
 
-        // Create database record
+        // Database creation timer
+        const createTimer = metrics.dbTimer('create_image');
         const image = await Image.create({
             file_name: req.file.originalname,
             url: `${process.env.S3_BUCKET_NAME}/${key}`,
             user_id: req.user.id
         });
+        createTimer.end();
 
         return res.status(201).json({
             file_name: image.file_name,
@@ -85,8 +78,8 @@ router.post('/v1/user/self/pic', auth, upload.single('profilePic'), async (req, 
             user_id: image.user_id
         });
     } catch (error) {
-        console.error(error);
-        return res.status(400).send("Req error");
+        logger.error('Image upload error:', error);
+        return res.status(400).send();
     }
 });
 

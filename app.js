@@ -4,7 +4,10 @@ const userRoutes = require('./routes/user');
 const imageRoutes = require('./routes/image');
 const app = express();
 const config = require('./config');
+const metricsMiddleware = require('./middleware/metrics');
+const logger = require('./utils/logger');
 
+app.use(metricsMiddleware);
 app.use(express.json());
 
 app.use('/healthz', async (req, res) => {
@@ -43,6 +46,14 @@ app.use((req, res) => {
     }
 });
 
+app.use((err, req, res, next) => {
+    logger.error('Application Error', {
+        error: err.message,
+        stack: err.stack
+    });
+    res.status(500).send();
+});
+
 
 const PORT = config.server.port;
 // Synchronize database schema
@@ -58,7 +69,7 @@ const startServer = async () => {
         });
 
     } catch (error) {
-        console.error(error);
+        logger.error('Server startup error:', error);
     }
 };
 
