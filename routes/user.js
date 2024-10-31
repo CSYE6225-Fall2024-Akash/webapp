@@ -3,69 +3,130 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const router = express.Router();
+const metrics = require('../utils/metrics');
+const logger = require('../utils/logger');
 
-// Regex for email validation
+// Regex patterns remain the same
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const passwordRegex = /^[^\s]{5,}$/; 
 const nameRegex = /^[^\s].*$/;
 
 // Create a new user (unauthenticated route)
 router.post('/v1/user', async (req, res) => {
+    // Start API timer and increment counter
+    const apiTimer = metrics.apiTimer('create_user');
+    metrics.incrementApiCall('create_user');
+    
+    logger.info('User creation attempt', { 
+        email: req.body.email,
+        path: '/v1/user',
+        method: 'POST'
+    });
+
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
     const { first_name, last_name, password, email } = req.body;
 
     if (!first_name || !last_name || !password || !email) {
+        logger.warn('User creation failed: Missing required fields');
+        apiTimer.end();
         return res.status(400).send();
     }
 
     // Check if user already exists
+    const dbCheckTimer = metrics.dbTimer('check_existing_user');
     const existingUser = await User.findOne({ where: { email } });
+    dbCheckTimer.end();
+
     if (existingUser) {
+        logger.warn('User creation failed: Email already exists', { email });
+        apiTimer.end();
         return res.status(400).send();
     }
 
     if (!nameRegex.test(first_name) || !nameRegex.test(last_name)) {
+        logger.warn('User creation failed: Invalid name format');
+        apiTimer.end();
         return res.status(400).send();
     }
 
-    // Validate email format
     if (!emailRegex.test(email)) {
+        logger.warn('User creation failed: Invalid email format', { email });
+        apiTimer.end();
         return res.status(400).send();
     }
 
     if (!passwordRegex.test(password)) {
+        logger.warn('User creation failed: Invalid password format');
+        apiTimer.end();
         return res.status(400).send();
     }
 
-    // Hash the password with bcrypt
-    const salt = await bcrypt.genSalt(10);
-    const password_hash = await bcrypt.hash(password, salt);
+    try {
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const password_hash = await bcrypt.hash(password, salt);
 
-    // Create user in the database
-    const user = await User.create({
-        first_name,
-        last_name,
-        email,
-        password_hash
-    });
+        // Create user in database
+        const dbCreateTimer = metrics.dbTimer('create_user_db');
+        const user = await User.create({
+            first_name,
+            last_name,
+            email,
+            password_hash
+        });
+        dbCreateTimer.end();
 
-    return res.status(201).json({
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        account_created: user.account_created,
-        account_updated: user.account_updated
-    });
+        logger.info('User created successfully', { 
+            userId: user.id,
+            email: user.email
+        });
+
+        apiTimer.end();
+        return res.status(201).json({
+            id: user.id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            email: user.email,
+            account_created: user.account_created,
+            account_updated: user.account_updated
+        });
+    } catch (error) {
+        logger.error('User creation error', { 
+            error: error.message,
+            email
+        });
+        apiTimer.end();
+        return res.status(400).send();
+    }
 });
 
 // Get user information (authenticated route)
 router.get('/v1/user/self', auth, async (req, res) => {
+    const apiTimer = metrics.apiTimer('get_user');
+    metrics.incrementApiCall('get_user');
+
+    logger.info('Get user profile attempt', { 
+        userId: req.user.id,
+        path: '/v1/user/self',
+        method: 'GET'
+    });
+
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
-    if (Object.keys(req.query).length !== 0 || req._body === true || req.header('Content-length') !== undefined){
+
+    if (Object.keys(req.query).length !== 0 || req._body === true || req.header('Content-length') !== undefined) {
+        logger.warn('Get user profile failed: Invalid request parameters', {
+            userId: req.user.id
+        });
+        apiTimer.end();
         return res.status(400).send(); 
     }
+
     const user = req.user;
+    logger.info('User profile retrieved successfully', { 
+        userId: user.id
+    });
+    
+    apiTimer.end();
     return res.status(200).json({
         id: user.id,
         first_name: user.first_name,
@@ -78,36 +139,63 @@ router.get('/v1/user/self', auth, async (req, res) => {
 
 // Update user information (authenticated route)
 router.put('/v1/user/self', auth, async (req, res) => {
+    const apiTimer = metrics.apiTimer('update_user');
+    metrics.incrementApiCall('update_user');
+
+    logger.info('Update user profile attempt', { 
+        userId: req.user.id,
+        path: '/v1/user/self',
+        method: 'PUT'
+    });
+
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
     const { first_name, last_name, password, email, account_created, account_updated } = req.body;
     const user = req.user;
 
     if (email && email !== user.email) {
+        logger.warn('Update user failed: Email modification attempted', {
+            userId: user.id
+        });
+        apiTimer.end();
         return res.status(400).send();
     }
 
     if (account_created || account_updated) {
+        logger.warn('Update user failed: Attempted to modify timestamps', {
+            userId: user.id
+        });
+        apiTimer.end();
         return res.status(400).send();
     }
 
-    // Object to hold updated fields
     const updatedFields = {};
 
-    // Conditionally add fields to be updated if they are provided
     if (first_name) {
         if (!nameRegex.test(first_name)) {
+            logger.warn('Update user failed: Invalid first name format', {
+                userId: user.id
+            });
+            apiTimer.end();
             return res.status(400).send();
         }
         updatedFields.first_name = first_name;
     }
     if (last_name) {
         if (!nameRegex.test(last_name)) {
+            logger.warn('Update user failed: Invalid last name format', {
+                userId: user.id
+            });
+            apiTimer.end();
             return res.status(400).send();
         }
         updatedFields.last_name = last_name;
     }
     if (password) {
         if (!passwordRegex.test(password)) {
+            logger.warn('Update user failed: Invalid password format', {
+                userId: user.id
+            });
+            apiTimer.end();
             return res.status(400).send();
         }
         const salt = await bcrypt.genSalt(10);
@@ -115,17 +203,36 @@ router.put('/v1/user/self', auth, async (req, res) => {
         updatedFields.password_hash = password_hash;
     }
 
-    // If no fields are provided, return 400
     if (Object.keys(updatedFields).length === 0) {
+        logger.warn('Update user failed: No valid fields to update', {
+            userId: user.id
+        });
+        apiTimer.end();
         return res.status(400).send();
     }
 
-    // Update the user with the provided fields and set account_updated
-    updatedFields.account_updated = new Date();
+    try {
+        updatedFields.account_updated = new Date();
 
-    await user.update(updatedFields);
+        const dbUpdateTimer = metrics.dbTimer('update_user_db');
+        await user.update(updatedFields);
+        dbUpdateTimer.end();
 
-    return res.status(204).send();  // No content response
+        logger.info('User profile updated successfully', { 
+            userId: user.id,
+            updatedFields: Object.keys(updatedFields).filter(field => field !== 'password_hash')
+        });
+
+        apiTimer.end();
+        return res.status(204).send();
+    } catch (error) {
+        logger.error('Update user error', { 
+            error: error.message,
+            userId: user.id
+        });
+        apiTimer.end();
+        return res.status(400).send();
+    }
 });
 
 module.exports = router;
