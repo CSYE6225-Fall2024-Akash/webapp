@@ -119,6 +119,10 @@ build {
     destination = "/opt/webapp"
   }
 
+  provisioner "file" {
+    source      = "../cloudwatch-agent-config.json"
+    destination = "/opt/webapp/webapp/cloudwatch-agent-config.json"
+  }
 
 
   provisioner "shell" {

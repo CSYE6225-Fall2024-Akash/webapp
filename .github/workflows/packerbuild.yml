@@ -90,7 +90,7 @@ jobs:
       - name: Create artifact
         run: |
           mkdir -p artifact
-          cp -R models routes app.js config.js package-lock.json package.json .env artifact/
+          cp -R models routes middleware utils app.js config.js package-lock.json package.json .env artifact/
           ls -la artifact/  # List all files in artifact directory
           ls -la artifact/.env  # Specifically check for .env
 
