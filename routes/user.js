@@ -16,7 +16,7 @@ router.post('/v1/user', async (req, res) => {
     const apiTimer = metrics.apiTimer('create_user');
     metrics.incrementApiCall('create_user');
 
-    logger.info('User creation attempt');
+    logger.info('User creation attempt')
 
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
     const { first_name, last_name, password, email } = req.body;
@@ -94,9 +94,7 @@ router.get('/v1/user/self', auth, async (req, res) => {
     }
     const user = req.user;
 
-    logger.info('User profile retrieved successfully', { 
-        userId: req.user.id 
-    });
+    logger.info('User profile retrieved successfully');
 
     apiTimer.end();
     return res.status(200).json({

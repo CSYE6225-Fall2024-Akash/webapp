@@ -4,24 +4,10 @@ const logger = winston.createLogger({
     level: 'info',
     format: winston.format.combine(
         winston.format.timestamp(),
-        winston.format.printf(info => {
-
-            const hostname = os.hostname();
-      
-            const logObj = {
-      
-              hostname,
-      
-              level: info.level,
-      
-              message: info.message
-      
-            };
-      
-            return JSON.stringify(logObj);
-        })
+        winston.format.json()
     ),
     transports: [
+        // Only log errors and warnings to console
         new winston.transports.Console({
             level: 'info',
             format: winston.format.combine(

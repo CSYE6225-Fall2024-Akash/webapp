@@ -42,11 +42,10 @@ app.use('/healthz', async (req, res) => {
         const dbTimer = metrics.dbTimer('health_check_db');
         await sequelize.authenticate(); 
         dbTimer.end();
-        logger.info('Health check successful: Database connection verified');
+        logger.info('Health check successful');
         apiTimer.end();
         res.status(200).send(''); 
     } catch (error) {
-        logger.error('Health check failed: Database connection error');
         apiTimer.end();
         res.status(503).send('');
     }
