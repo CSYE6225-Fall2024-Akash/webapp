@@ -17,11 +17,11 @@ on:
   push:
     branches:
       - A06/test
-  # pull_request:
-  #   types:
-  #     - closed
-  #   branches:
-  #     - main
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
 
 jobs:
   npm-test:

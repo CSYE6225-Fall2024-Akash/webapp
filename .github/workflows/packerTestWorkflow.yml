@@ -4,12 +4,12 @@ on:
   push:
     branches:
       - A06/test
-  # pull_request:
-  #   types:
-  #     - opened
-  #     - reopened
-  #   branches:
-  #     - main
+  pull_request:
+    types:
+      - opened
+      - reopened
+    branches:
+      - main
 
 jobs:
   packer-fmt-and-validate:
