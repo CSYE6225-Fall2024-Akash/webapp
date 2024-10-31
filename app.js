@@ -11,64 +11,50 @@ app.use(metricsMiddleware);
 app.use(express.json());
 
 app.use('/healthz', async (req, res) => {
-    // Start API timer and increment counter
     const apiTimer = metrics.apiTimer('healthz');
     metrics.incrementApiCall('healthz');
 
     logger.info('Health check initiated', {
-        path: '/healthz',
         method: req.method,
-        requestPath: req.path
+        path: req.path
     });
 
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
     
     if (req.method !== 'GET') {
         logger.warn('Health check failed: Invalid HTTP method', {
-            method: req.method,
-            expectedMethod: 'GET'
+            method: req.method
         });
         apiTimer.end();
-        return res.status(405).send();
+        return res.status(405).send();  // Respond with 405 Method Not Allowed
     }
 
-    if (Object.keys(req.query).length !== 0 || req._body === true || req.header('Content-length') !== undefined) {
-        logger.warn('Health check failed: Invalid request parameters', {
-            hasQuery: Object.keys(req.query).length > 0,
-            hasBody: req._body,
-            hasContentLength: req.header('Content-length') !== undefined
-        });
+    if (Object.keys(req.query).length !== 0 || req._body === true || req.header('Content-length') !== undefined){
+        logger.warn('Health check failed: Invalid request parameters');
         apiTimer.end();
-        return res.status(400).send();
+        return res.status(400).send();  // Respond with 400 Bad Request if payload is present
     }
 
+    // Ensure that only `/healthz` is checked and not sub-paths like `/healthz/*`
     if (req.path !== '/') {
         logger.warn('Health check failed: Invalid path', {
-            path: req.path,
-            expectedPath: '/'
+            path: req.path
         });
         apiTimer.end();
-        return res.status(404).send();
+        return res.status(404).send();  // Respond with 404 Not Found for invalid sub-paths
     }
     
     try {
-        // Database connection check with timing
         const dbTimer = metrics.dbTimer('health_check_db');
-        await sequelize.authenticate();
+        await sequelize.authenticate(); 
         dbTimer.end();
-
-        logger.info('Health check successful', {
-            status: 'healthy',
-            responseTime: apiTimer.end()
-        });
-
-        res.status(200).send('');
+        logger.info('Health check successful: Database connection verified');
+        apiTimer.end();
+        res.status(200).send(''); 
     } catch (error) {
         logger.error('Health check failed: Database connection error', {
-            error: error.message,
-            stack: error.stack
+            error: error.message
         });
-        
         apiTimer.end();
         res.status(503).send('');
     }

@@ -21,64 +21,40 @@ const upload = multer({
     fileFilter: function(req, file, cb) {
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
         if (!allowedTypes.includes(file.mimetype)) {
-            logger.warn('Image upload failed: Invalid file type', {
-                fileType: file.mimetype,
-                allowedTypes
-            });
             return cb(new Error('Only jpeg, jpg and png files are allowed!'), false);
         }
         cb(null, true);
     }
 });
 
+
 // Add profile picture
 router.post('/v1/user/self/pic', auth, upload.single('profilePic'), async (req, res) => {
     const apiTimer = metrics.apiTimer('upload_profile_pic');
     metrics.incrementApiCall('upload_profile_pic');
-
-    logger.info('Profile picture upload attempt', {
-        userId: req.user.id,
-        path: '/v1/user/self/pic',
-        method: 'POST'
-    });
-
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');
 
     try {
         if (!req.file) {
-            logger.warn('Profile picture upload failed: No file provided', {
-                userId: req.user.id
-            });
             apiTimer.end();
             return res.status(400).send();
         }
 
         // Check if user already has a profile picture
-        const dbCheckTimer = metrics.dbTimer('find_existing_image');
+        const dbTimer = metrics.dbTimer('find_existing_image');
         const existingImage = await Image.findOne({
             where: { user_id: req.user.id }
         });
-        dbCheckTimer.end();
+        dbTimer.end();
 
         if (existingImage) {
-            logger.warn('Profile picture upload failed: User already has profile picture', {
-                userId: req.user.id,
-                existingImageId: existingImage.id
-            });
-            apiTimer.end();
             return res.status(400).send();
         }
 
         const fileExtension = path.extname(req.file.originalname);
         const key = `${req.user.id}${fileExtension}`;
 
-        logger.info('Uploading image to S3', {
-            userId: req.user.id,
-            fileName: req.file.originalname,
-            fileSize: req.file.size
-        });
-
-        // S3 upload
+        // S3 operation timer
         const s3Timer = metrics.s3Timer('upload_image');
         await s3.putObject({
             Bucket: process.env.S3_BUCKET_NAME,
@@ -88,25 +64,14 @@ router.post('/v1/user/self/pic', auth, upload.single('profilePic'), async (req, 
         }).promise();
         s3Timer.end();
 
-        logger.info('Successfully uploaded image to S3', {
-            userId: req.user.id,
-            key
-        });
-
-        // Create database record
-        const dbCreateTimer = metrics.dbTimer('create_image');
+        // Database creation timer
+        const createTimer = metrics.dbTimer('create_image');
         const image = await Image.create({
             file_name: req.file.originalname,
             url: `${process.env.S3_BUCKET_NAME}/${key}`,
             user_id: req.user.id
         });
-        dbCreateTimer.end();
-
-        logger.info('Profile picture uploaded successfully', {
-            userId: req.user.id,
-            imageId: image.id,
-            fileName: image.file_name
-        });
+        createTimer.end();
 
         apiTimer.end();
         return res.status(201).json({
@@ -117,12 +82,8 @@ router.post('/v1/user/self/pic', auth, upload.single('profilePic'), async (req, 
             user_id: image.user_id
         });
     } catch (error) {
-        logger.error('Profile picture upload error', {
-            userId: req.user.id,
-            error: error.message,
-            stack: error.stack
-        });
         apiTimer.end();
+        logger.error('Image upload error:', error);
         return res.status(400).send();
     }
 });
@@ -131,19 +92,9 @@ router.post('/v1/user/self/pic', auth, upload.single('profilePic'), async (req, 
 router.get('/v1/user/self/pic', auth, async (req, res) => {
     const apiTimer = metrics.apiTimer('get_profile_pic');
     metrics.incrementApiCall('get_profile_pic');
-
-    logger.info('Profile picture retrieval attempt', {
-        userId: req.user.id,
-        path: '/v1/user/self/pic',
-        method: 'GET'
-    });
-
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');
     
     if (Object.keys(req.query).length !== 0 || req._body === true || req.header('Content-length') !== undefined) {
-        logger.warn('Profile picture retrieval failed: Invalid request parameters', {
-            userId: req.user.id
-        });
         apiTimer.end();
         return res.status(400).send();
     }
@@ -156,17 +107,9 @@ router.get('/v1/user/self/pic', auth, async (req, res) => {
         dbTimer.end();
 
         if (!image) {
-            logger.info('Profile picture not found', {
-                userId: req.user.id
-            });
             apiTimer.end();
             return res.status(404).send();
         }
-
-        logger.info('Profile picture retrieved successfully', {
-            userId: req.user.id,
-            imageId: image.id
-        });
 
         apiTimer.end();
         return res.status(200).json({
@@ -177,11 +120,6 @@ router.get('/v1/user/self/pic', auth, async (req, res) => {
             user_id: image.user_id
         });
     } catch (error) {
-        logger.error('Profile picture retrieval error', {
-            userId: req.user.id,
-            error: error.message,
-            stack: error.stack
-        });
         apiTimer.end();
         return res.status(500).send();
     }
@@ -191,70 +129,43 @@ router.get('/v1/user/self/pic', auth, async (req, res) => {
 router.delete('/v1/user/self/pic', auth, async (req, res) => {
     const apiTimer = metrics.apiTimer('delete_profile_pic');
     metrics.incrementApiCall('delete_profile_pic');
-
-    logger.info('Profile picture deletion attempt', {
-        userId: req.user.id,
-        path: '/v1/user/self/pic',
-        method: 'DELETE'
-    });
-
+    
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');
     
     if (Object.keys(req.query).length !== 0 || req._body === true || req.header('Content-length') !== undefined) {
-        logger.warn('Profile picture deletion failed: Invalid request parameters', {
-            userId: req.user.id
-        });
         apiTimer.end();
         return res.status(400).send();
     }
 
     try {
-        const dbFindTimer = metrics.dbTimer('find_image_for_delete');
+        const dbTimer = metrics.dbTimer('find_image_for_delete');
         const image = await Image.findOne({
             where: { user_id: req.user.id }
         });
-        dbFindTimer.end();
+        dbTimer.end();
 
         if (!image) {
-            logger.info('Profile picture not found for deletion', {
-                userId: req.user.id
-            });
             apiTimer.end();
             return res.status(404).send();
         }
 
         // Delete from S3
-        const key = image.url.split('/').pop();
         const s3Timer = metrics.s3Timer('delete_image');
+        const key = image.url.split('/').pop();
         await s3.deleteObject({
             Bucket: process.env.S3_BUCKET_NAME,
             Key: key
         }).promise();
         s3Timer.end();
 
-        logger.info('Successfully deleted image from S3', {
-            userId: req.user.id,
-            key
-        });
-
         // Delete from database
-        const dbDeleteTimer = metrics.dbTimer('delete_image');
+        const deleteTimer = metrics.dbTimer('delete_image_db');
         await image.destroy();
-        dbDeleteTimer.end();
-
-        logger.info('Profile picture deleted successfully', {
-            userId: req.user.id,
-            imageId: image.id
-        });
+        deleteTimer.end();
 
         apiTimer.end();
         return res.status(204).send();
     } catch (error) {
-        logger.error('Profile picture deletion error', {
-            userId: req.user.id,
-            error: error.message,
-            stack: error.stack
-        });
         apiTimer.end();
         return res.status(500).send();
     }
