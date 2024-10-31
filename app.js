@@ -15,17 +15,12 @@ app.use('/healthz', async (req, res) => {
     const apiTimer = metrics.apiTimer('healthz');
     metrics.incrementApiCall('healthz');
 
-    logger.info('Health check initiated', {
-        method: req.method,
-        path: req.path
-    });
+    logger.info('Health check initiated');
 
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
     
     if (req.method !== 'GET') {
-        logger.warn('Health check failed: Invalid HTTP method', {
-            method: req.method
-        });
+        logger.warn('Health check failed: Invalid HTTP method');
         apiTimer.end();
         return res.status(405).send();  // Respond with 405 Method Not Allowed
     }
@@ -38,9 +33,7 @@ app.use('/healthz', async (req, res) => {
 
     // Ensure that only `/healthz` is checked and not sub-paths like `/healthz/*`
     if (req.path !== '/') {
-        logger.warn('Health check failed: Invalid path', {
-            path: req.path
-        });
+        logger.warn('Health check failed: Invalid path');
         apiTimer.end();
         return res.status(404).send();  // Respond with 404 Not Found for invalid sub-paths
     }
@@ -53,9 +46,7 @@ app.use('/healthz', async (req, res) => {
         apiTimer.end();
         res.status(200).send(''); 
     } catch (error) {
-        logger.error('Health check failed: Database connection error', {
-            error: error.message
-        });
+        logger.error('Health check failed: Database connection error');
         apiTimer.end();
         res.status(503).send('');
     }

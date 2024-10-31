@@ -16,9 +16,7 @@ router.post('/v1/user', async (req, res) => {
     const apiTimer = metrics.apiTimer('create_user');
     metrics.incrementApiCall('create_user');
 
-    logger.info('User creation attempt', { 
-        email: req.body.email 
-    });
+    logger.info('User creation attempt');
 
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
     const { first_name, last_name, password, email } = req.body;
@@ -86,9 +84,7 @@ router.get('/v1/user/self', auth, async (req, res) => {
     const apiTimer = metrics.apiTimer('get_user');
     metrics.incrementApiCall('get_user');
 
-    logger.info('Get user profile attempt', { 
-        userId: req.user.id 
-    });
+    logger.info('Get user profile attempt');
 
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
     if (Object.keys(req.query).length !== 0 || req._body === true || req.header('Content-length') !== undefined){
@@ -118,18 +114,14 @@ router.put('/v1/user/self', auth, async (req, res) => {
     const apiTimer = metrics.apiTimer('update_user');
     metrics.incrementApiCall('update_user');
 
-    logger.info('Update user profile attempt', { 
-        userId: req.user.id 
-    });
+    logger.info('Update user profile attempt');
 
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
     const { first_name, last_name, password, email, account_created, account_updated } = req.body;
     const user = req.user;
 
     if (email && email !== user.email) {
-        logger.warn('Update user failed: Cannot modify email', {
-            userId: user.id
-        });
+        logger.warn('Update user failed: Cannot modify email');
         apiTimer.end();
         return res.status(400).send();
     }
