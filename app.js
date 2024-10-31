@@ -6,6 +6,7 @@ const app = express();
 const config = require('./config');
 const metricsMiddleware = require('./middleware/metrics');
 const logger = require('./utils/logger');
+const metrics = require('../utils/metrics');
 
 app.use(metricsMiddleware);
 app.use(express.json());

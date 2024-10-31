@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const router = express.Router();
+const metrics = require('../utils/metrics');
+const logger = require('../utils/logger');
 
 // Regex for email validation
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
