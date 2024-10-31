@@ -22,7 +22,6 @@ const logger = winston.createLogger({
         })
     ),
     transports: [
-        // Only log errors and warnings to console
         new winston.transports.Console({
             level: 'info',
             format: winston.format.combine(
