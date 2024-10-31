@@ -15,10 +15,17 @@ const nameRegex = /^[^\s].*$/;
 router.post('/v1/user', async (req, res) => {
     const apiTimer = metrics.apiTimer('create_user');
     metrics.incrementApiCall('create_user');
+
+    logger.info('User creation attempt', { 
+        email: req.body.email 
+    });
+
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
     const { first_name, last_name, password, email } = req.body;
 
     if (!first_name || !last_name || !password || !email) {
+        logger.warn('User creation failed: Missing required fields');
+
         apiTimer.end();
         return res.status(400).send();
     }
@@ -26,8 +33,10 @@ router.post('/v1/user', async (req, res) => {
     // Check if user already exists
     const dbTimer = metrics.dbTimer('check_existing_user');
     const existingUser = await User.findOne({ where: { email } });
+    dbTimer.end();
     if (existingUser) {
-        dbTimer.end();
+        logger.warn('User creation failed: Email already exists', { email });
+        apiTimer.end();
         return res.status(400).send();
     }
 
@@ -57,7 +66,10 @@ router.post('/v1/user', async (req, res) => {
         password_hash
     });
     createTimer.end();
-
+    logger.info('User created successfully', { 
+        userId: user.id,
+        email: user.email 
+    });
     apiTimer.end();
     return res.status(201).json({
         id: user.id,
@@ -73,12 +85,23 @@ router.post('/v1/user', async (req, res) => {
 router.get('/v1/user/self', auth, async (req, res) => {
     const apiTimer = metrics.apiTimer('get_user');
     metrics.incrementApiCall('get_user');
+
+    logger.info('Get user profile attempt', { 
+        userId: req.user.id 
+    });
+
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
     if (Object.keys(req.query).length !== 0 || req._body === true || req.header('Content-length') !== undefined){
+        logger.warn('Get user profile failed: Invalid request parameters');
         apiTimer.end();
         return res.status(400).send(); 
     }
     const user = req.user;
+
+    logger.info('User profile retrieved successfully', { 
+        userId: req.user.id 
+    });
+
     apiTimer.end();
     return res.status(200).json({
         id: user.id,
@@ -94,11 +117,20 @@ router.get('/v1/user/self', auth, async (req, res) => {
 router.put('/v1/user/self', auth, async (req, res) => {
     const apiTimer = metrics.apiTimer('update_user');
     metrics.incrementApiCall('update_user');
+
+    logger.info('Update user profile attempt', { 
+        userId: req.user.id 
+    });
+
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');  
     const { first_name, last_name, password, email, account_created, account_updated } = req.body;
     const user = req.user;
 
     if (email && email !== user.email) {
+        logger.warn('Update user failed: Cannot modify email', {
+            userId: user.id
+        });
+        apiTimer.end();
         return res.status(400).send();
     }
 
@@ -142,6 +174,11 @@ router.put('/v1/user/self', auth, async (req, res) => {
     const dbTimer = metrics.dbTimer('update_user_db');
     await user.update(updatedFields);
     dbTimer.end();
+
+    logger.info('User profile updated successfully', { 
+        userId: user.id,
+        updatedFields: Object.keys(updatedFields).filter(f => f !== 'password_hash')
+    });
 
     apiTimer.end();
 
