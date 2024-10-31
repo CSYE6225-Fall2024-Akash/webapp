@@ -15,8 +15,6 @@ const metricsMiddleware = (req, res, next) => {
     logger.info('API Call', {
         method: req.method,
         path: req.path,
-        query: req.query,
-        headers: req.headers
     });
 
     // Capture response time

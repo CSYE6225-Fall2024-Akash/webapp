@@ -1,13 +1,4 @@
 const winston = require('winston');
-const CloudWatchTransport = require('winston-cloudwatch');
-
-
-var options = {
-    file: {
-      level: 'info',
-      filename: `/opt/webapp/combined.log`,    
-    },
-  }
 
 const logger = winston.createLogger({
     level: 'info',
@@ -16,12 +7,17 @@ const logger = winston.createLogger({
         winston.format.json()
     ),
     transports: [
-        new winston.transports.Console(),
-        new winston.transports.File(options.file),
-        new CloudWatchTransport({
-            logGroupName: 'csye6225',
-            logStreamName: 'webapp',
-            awsRegion: process.env.AWS_REGION || 'us-east-1'
+        // Only log errors and warnings to console
+        new winston.transports.Console({
+            level: 'warn',
+            format: winston.format.combine(
+                winston.format.colorize(),
+                winston.format.simple()
+            )
+        }),
+        // Log everything to file
+        new winston.transports.File({ 
+            filename: '/opt/webapp/combined.log'
         })
     ]
 });
