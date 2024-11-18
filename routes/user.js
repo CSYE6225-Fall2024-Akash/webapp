@@ -69,7 +69,7 @@ router.post('/v1/user', async (req, res) => {
     });
     createTimer.end();
 
-    if (process.env.NODE_ENV !== 'test' && process.env.USER_TOPIC_ARN) {
+    if (process.env.NODE_ENV !== 'test') {
         try {
             const snsTimer = metrics.s3Timer('sns_publish');
             const snsPayload = {
