@@ -2,6 +2,7 @@ const request = require('supertest');
 const { app, startServer } = require('../app'); 
 const User = require('../models/User');
 const sequelize = require('../models/index');
+process.env.NODE_ENV = 'test';
 
 // Increase the default timeout for all tests
 jest.setTimeout(30000); // 30 seconds
