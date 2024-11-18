@@ -44,6 +44,23 @@ describe('Health Check', () => {
 });
 
 describe('User Routes', () => {
+  let testUser;
+  let testUserPassword = 'password123';
+
+  beforeAll(async () => {
+    // Create a test user with known credentials
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(testUserPassword, salt);
+    
+    testUser = await User.create({
+      first_name: 'Test',
+      last_name: 'User',
+      email: 'test@example.com',
+      password_hash: password_hash,
+      isVerified: true  // Set as verified for testing
+    });
+  });
+
   describe('POST /v1/user', () => {
     it('should create a new user', async () => {
       const response = await request(app)
@@ -63,7 +80,7 @@ describe('User Routes', () => {
       expect(response.body).not.toHaveProperty('password');
 
       const user = await User.findOne({ where: { email: 'john@example.com' } });
-      await user.update({ isVerified: true });
+      expect(user).toBeTruthy();
 
     }, 10000);
 
@@ -85,13 +102,14 @@ describe('User Routes', () => {
 
   describe('GET /v1/user/self', () => {
     it('should return user information for authenticated user', async () => {
-      const user = await User.findOne({ where: { email: 'john@example.com' } });
+      const credentials = Buffer.from(`${testUser.email}:${testUserPassword}`).toString('base64');
+      
       const response = await request(app)
         .get('/v1/user/self')
-        .auth(user.email, 'password123');
+        .set('Authorization', `Basic ${credentials}`);
 
       expect(response.statusCode).toBe(200);
-      expect(response.body.email).toBe('john@example.com');
+      expect(response.body.email).toBe(testUser.email);
     }, 10000);
 
     it('should return 401 for unauthenticated request', async () => {
@@ -102,10 +120,11 @@ describe('User Routes', () => {
 
   describe('PUT /v1/user/self', () => {
     it('should update user information', async () => {
-      const user = await User.findOne({ where: { email: 'john@example.com' } });
+      const credentials = Buffer.from(`${testUser.email}:${testUserPassword}`).toString('base64');
+      
       const response = await request(app)
         .put('/v1/user/self')
-        .auth(user.email, 'password123')
+        .set('Authorization', `Basic ${credentials}`)
         .send({
           first_name: 'Johnny',
           last_name: 'Doey'
@@ -113,16 +132,16 @@ describe('User Routes', () => {
 
       expect(response.statusCode).toBe(204);
 
-      const updatedUser = await User.findOne({ where: { email: 'john@example.com' } });
-      expect(updatedUser.first_name).toBe('Johnny');
+      const updatedUser = await User.findByPk(testUser.id);      expect(updatedUser.first_name).toBe('Johnny');
       expect(updatedUser.last_name).toBe('Doey');
     }, 10000);
 
     it('should return 400 if trying to update email', async () => {
-      const user = await User.findOne({ where: { email: 'john@example.com' } });
+      const credentials = Buffer.from(`${testUser.email}:${testUserPassword}`).toString('base64');
+      
       const response = await request(app)
         .put('/v1/user/self')
-        .auth(user.email, 'password123')
+        .set('Authorization', `Basic ${credentials}`)
         .send({
           email: 'newemail@example.com'
         });
