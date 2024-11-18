@@ -59,6 +59,11 @@ router.post('/v1/user', async (req, res) => {
         return res.status(400).send();
     }
 
+    // Generate verification token and expiry
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const now = new Date();
+    const expiryTime = new Date(now.getTime() + 2 * 60000);
+
     // Hash the password with bcrypt
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
@@ -70,19 +75,22 @@ router.post('/v1/user', async (req, res) => {
         last_name,
         email,
         password_hash,
-        isVerified: false
+        isVerified: false,
+        verificationToken: verificationToken,
+        emailSentTimeStamp: now,
+        expiryTimeStamp: expiryTime
     });
     createTimer.end();
 
     try {
         const snsTimer = metrics.s3Timer('sns_publish');
         const snsPayload = {
-            userId: user.id,
             firstName: user.first_name,
             lastName: user.last_name,
             email: user.email,
             accountCreated: user.account_created,
-            verificationToken: user.verificationToken
+            verificationToken: verificationToken,
+            verificationUrl: `https://${process.env.DOMAIN_NAME}/v1/verify?email=${encodeURIComponent(email)}&token=${verificationToken}`
         };
 
         await sns.publish({
