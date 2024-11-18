@@ -7,6 +7,11 @@ const router = express.Router();
 const metrics = require('../utils/metrics');
 const logger = require('../utils/logger');
 
+
+AWS.config.update({
+    region: process.env.AWS_REGION 
+});
+
 const sns = new AWS.SNS();
 
 // Regex for email validation
