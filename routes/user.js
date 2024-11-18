@@ -69,30 +69,29 @@ router.post('/v1/user', async (req, res) => {
     });
     createTimer.end();
 
-    if (process.env.NODE_ENV !== 'test') {
-        try {
-            const snsTimer = metrics.s3Timer('sns_publish');
-            const snsPayload = {
-                userId: user.id,
-                firstName: user.first_name,
-                lastName: user.last_name,
-                email: user.email,
-                accountCreated: user.account_created,
-                verificationToken: user.verificationToken
-            };
+    try {
+        const snsTimer = metrics.s3Timer('sns_publish');
+        const snsPayload = {
+            userId: user.id,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            email: user.email,
+            accountCreated: user.account_created,
+            verificationToken: user.verificationToken
+        };
 
-            await sns.publish({
-                TopicArn: process.env.USER_TOPIC_ARN,
-                Message: JSON.stringify(snsPayload)
-            }).promise();
-            snsTimer.end();
-            
-            logger.info('SNS message published successfully', { userId: user.id });
-        } catch (error) {
-            logger.error('SNS publish error:', error);
-            // Continue with user creation even if SNS fails
-        }
+        await sns.publish({
+            TopicArn: process.env.USER_TOPIC_ARN,
+            Message: JSON.stringify(snsPayload)
+        }).promise();
+        snsTimer.end();
+        
+        logger.info('SNS message published successfully', { userId: user.id });
+    } catch (error) {
+        logger.error('SNS publish error:', error);
+        // Continue with user creation even if SNS fails
     }
+
 
     logger.info('User created successfully', { 
         userId: user.id,
