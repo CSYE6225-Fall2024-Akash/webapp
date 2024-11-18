@@ -107,6 +107,8 @@ jobs:
     needs: create_artifact
     name: Build Packer Image
     runs-on: ubuntu-latest
+    outputs:
+      ami_id: ${{ steps.get_ami.outputs.ami_id }}
 
     steps:
       - name: Checkout code
@@ -139,7 +141,13 @@ jobs:
       - name: Get AMI ID
         id: get_ami
         run: |
-          AMI_ID=$(aws ec2 describe-images --owners self --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text)
+          sleep 10
+      
+          AMI_ID=$(aws ec2 describe-images \
+            --owners self \
+            --query 'sort_by(Images, &CreationDate)[-1].ImageId' \
+            --output text)
+          echo "AMI ID: $AMI_ID"
           echo "ami_id=${AMI_ID}" >> $GITHUB_OUTPUT
 
       - name: Clean up
@@ -164,6 +172,9 @@ jobs:
           LAUNCH_TEMPLATE_ID=$(aws ec2 describe-launch-templates --filters Name=tag:Environment,Values=dev --query 'LaunchTemplates[0].LaunchTemplateId' --output text)
           LATEST_VERSION=$(aws ec2 describe-launch-template-versions --launch-template-id $LAUNCH_TEMPLATE_ID --query 'sort_by(LaunchTemplateVersions, &VersionNumber)[-1]')
           
+          echo "Creating new launch template version with AMI: ${{ needs.packer_build.outputs.ami_id }}"
+
+
           if [ -z "$LAUNCH_TEMPLATE_ID" ]; then
             echo "No Launch Template found with Environment tag 'dev'"
             exit 0 
