@@ -175,7 +175,7 @@ jobs:
           echo "Creating new launch template version with AMI: ${{ needs.packer_build.outputs.ami_id }}"
 
 
-          if [ -z "$LAUNCH_TEMPLATE_ID" ]; then
+          if [ "$LAUNCH_TEMPLATE_ID" = "None" ] || -z "$LAUNCH_TEMPLATE_ID" ]; then
             echo "No Launch Template found with Environment tag 'dev'"
             exit 0 
           fi
@@ -191,7 +191,7 @@ jobs:
       - name: Start ASG Instance Refresh
         id: refresh
         run: |
-          ASG_NAME=$(aws autoscaling describe-auto-scaling-groups --query 'AutoScalingGroups[?contains(Tags[?Key==`Environment`].Value, `dev`)].[AutoScalingGroupName]' --output text)
+          ASG_NAME=$(aws autoscaling describe-auto-scaling-groups --query 'AutoScalingGroups[?contains(Tags[?Key==`Name`].Value, `dev-webapp-asg-instance`)].[AutoScalingGroupName]' --output text)
           
           if [ -z "$ASG_NAME" ]; then
             echo "No ASG found with Environment tag 'dev'"
@@ -246,7 +246,7 @@ jobs:
           LAUNCH_TEMPLATE_ID=$(aws ec2 describe-launch-templates --filters Name=tag:Environment,Values=demo --query 'LaunchTemplates[0].LaunchTemplateId' --output text)
           LATEST_VERSION=$(aws ec2 describe-launch-template-versions --launch-template-id $LAUNCH_TEMPLATE_ID --query 'sort_by(LaunchTemplateVersions, &VersionNumber)[-1]')
           
-          if [ -z "$LAUNCH_TEMPLATE_ID" ]; then
+          if [ "$LAUNCH_TEMPLATE_ID" = "None" ] || -z "$LAUNCH_TEMPLATE_ID" ]; then
             echo "No Launch Template found in Demo environment"
             exit 0
           fi
@@ -262,7 +262,7 @@ jobs:
       - name: Start ASG Instance Refresh
         id: refresh
         run: |
-          ASG_NAME=$(aws autoscaling describe-auto-scaling-groups --query 'AutoScalingGroups[?contains(Tags[?Key==`Environment`].Value, `demo`)].[AutoScalingGroupName]' --output text)
+          ASG_NAME=$(aws autoscaling describe-auto-scaling-groups --query 'AutoScalingGroups[?contains(Tags[?Key==`Name`].Value, `demo-webapp-asg-instance`)].[AutoScalingGroupName]' --output text)
           
           if [ -z "$ASG_NAME" ]; then
             echo "No ASG found in Demo environment"
