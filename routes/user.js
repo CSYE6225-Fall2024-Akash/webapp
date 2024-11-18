@@ -1,10 +1,13 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const AWS = require('aws-sdk');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const router = express.Router();
 const metrics = require('../utils/metrics');
 const logger = require('../utils/logger');
+
+const sns = new AWS.SNS();
 
 // Regex for email validation
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -61,9 +64,34 @@ router.post('/v1/user', async (req, res) => {
         first_name,
         last_name,
         email,
-        password_hash
+        password_hash,
+        isVerified: false
     });
     createTimer.end();
+
+    try {
+        const snsTimer = metrics.s3Timer('sns_publish');
+        const snsPayload = {
+            userId: user.id,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            email: user.email,
+            accountCreated: user.account_created,
+            verificationToken: user.verificationToken
+        };
+
+        await sns.publish({
+            TopicArn: process.env.USER_TOPIC_ARN,
+            Message: JSON.stringify(snsPayload)
+        }).promise();
+        snsTimer.end();
+        
+        logger.info('SNS message published successfully', { userId: user.id });
+    } catch (error) {
+        logger.error('SNS publish error:', error);
+        // Continue with user creation even if SNS fails
+    }
+
     logger.info('User created successfully', { 
         userId: user.id,
         email: user.email 
@@ -78,6 +106,66 @@ router.post('/v1/user', async (req, res) => {
         account_updated: user.account_updated
     });
 });
+
+
+// Verification endpoint
+router.get('/v1/verify', async (req, res) => {
+    const apiTimer = metrics.apiTimer('verify_email');
+    metrics.incrementApiCall('verify_email');
+    
+    logger.info('Email verification attempt');
+    
+    try {
+        const { email, token } = req.query;
+        
+        if (!email || !token) {
+            logger.warn('Verification failed: Missing email or token');
+            apiTimer.end();
+            return res.status(400).send();
+        }
+
+        // Find user by email and verification token
+        const user = await User.findOne({
+            where: { 
+                email: email,
+                verificationToken: token
+            }
+        });
+
+        if (!user) {
+            logger.warn('Verification failed: Invalid email or token');
+            apiTimer.end();
+            return res.status(400).send();
+        }
+
+        // Check token expiration
+        const now = new Date();
+        if (!user.expiryTimeStamp || now > user.expiryTimeStamp) {
+            logger.warn('Verification failed: Token expired');
+            apiTimer.end();
+            return res.status(400).json({ 
+                error: 'Verification link has expired'
+            });
+        }
+
+        // Update user verification status
+        await user.update({
+            isVerified: true,
+            verificationToken: null,
+            emailSentTimeStamp: null,
+            expiryTimeStamp: null
+        });
+
+        logger.info('Email verified successfully', { email: user.email });
+        apiTimer.end();
+        return res.status(200).json({ message: 'Email verified successfully' });
+    } catch (error) {
+        logger.error('Email verification error:', error);
+        apiTimer.end();
+        return res.status(400).send();
+    }
+});
+
 
 // Get user information (authenticated route)
 router.get('/v1/user/self', auth, async (req, res) => {

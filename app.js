@@ -2,6 +2,8 @@ const express = require('express');
 const sequelize = require('./models/index');
 const userRoutes = require('./routes/user');
 const imageRoutes = require('./routes/image');
+const auth = require('./middleware/auth');
+const { checkVerification } = require('./middleware/verification');
 const app = express();
 const config = require('./config');
 const metricsMiddleware = require('./middleware/metrics');
@@ -51,7 +53,8 @@ app.use('/healthz', async (req, res) => {
     }
 });
 
-
+app.use(auth);
+app.use(checkVerification);
 
 app.use(userRoutes);
 app.use(imageRoutes);
