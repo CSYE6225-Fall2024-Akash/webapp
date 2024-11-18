@@ -53,7 +53,6 @@ app.use('/healthz', async (req, res) => {
     }
 });
 
-app.use(auth);
 app.use(checkVerification);
 
 app.use(userRoutes);

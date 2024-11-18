@@ -154,147 +154,147 @@ jobs:
         if: always()
         run: rm -rf webapp
 
-  update_dev_asg:
-    needs: packer_build
-    name: Update Dev ASG
-    runs-on: ubuntu-latest
+  # update_dev_asg:
+  #   needs: packer_build
+  #   name: Update Dev ASG
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: Configure AWS Dev credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
-          aws-region: ${{ secrets.REGION }}
+  #   steps:
+  #     - name: Configure AWS Dev credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+  #         aws-region: ${{ secrets.REGION }}
 
-      - name: Create new Launch Template version
-        run: |
-          LAUNCH_TEMPLATE_ID=$(aws ec2 describe-launch-templates --filters Name=tag:Environment,Values=dev --query 'LaunchTemplates[0].LaunchTemplateId' --output text)
-          LATEST_VERSION=$(aws ec2 describe-launch-template-versions --launch-template-id $LAUNCH_TEMPLATE_ID --query 'sort_by(LaunchTemplateVersions, &VersionNumber)[-1]')
+  #     - name: Create new Launch Template version
+  #       run: |
+  #         LAUNCH_TEMPLATE_ID=$(aws ec2 describe-launch-templates --filters Name=tag:Environment,Values=dev --query 'LaunchTemplates[0].LaunchTemplateId' --output text)
+  #         LATEST_VERSION=$(aws ec2 describe-launch-template-versions --launch-template-id $LAUNCH_TEMPLATE_ID --query 'sort_by(LaunchTemplateVersions, &VersionNumber)[-1]')
           
-          echo "Creating new launch template version with AMI: ${{ needs.packer_build.outputs.ami_id }}"
+  #         echo "Creating new launch template version with AMI: ${{ needs.packer_build.outputs.ami_id }}"
 
 
-          if [ "$LAUNCH_TEMPLATE_ID" = "None" ] || -z "$LAUNCH_TEMPLATE_ID" ]; then
-            echo "No Launch Template found with Environment tag 'dev'"
-            exit 0 
-          fi
+  #         if [ "$LAUNCH_TEMPLATE_ID" = "None" ] || -z "$LAUNCH_TEMPLATE_ID" ]; then
+  #           echo "No Launch Template found with Environment tag 'dev'"
+  #           exit 0 
+  #         fi
 
-          NEW_VERSION=$(aws ec2 create-launch-template-version \
-            --launch-template-id $LAUNCH_TEMPLATE_ID \
-            --source-version '$Latest' \
-            --launch-template-data '{"ImageId":"${{ needs.packer_build.outputs.ami_id }}"}' \
-            --query 'LaunchTemplateVersion.VersionNumber' --output text)
+  #         NEW_VERSION=$(aws ec2 create-launch-template-version \
+  #           --launch-template-id $LAUNCH_TEMPLATE_ID \
+  #           --source-version '$Latest' \
+  #           --launch-template-data '{"ImageId":"${{ needs.packer_build.outputs.ami_id }}"}' \
+  #           --query 'LaunchTemplateVersion.VersionNumber' --output text)
           
-          echo "Created Launch Template version $NEW_VERSION"
+  #         echo "Created Launch Template version $NEW_VERSION"
 
-      - name: Start ASG Instance Refresh
-        id: refresh
-        run: |
-          ASG_NAME=$(aws autoscaling describe-auto-scaling-groups --query 'AutoScalingGroups[?contains(Tags[?Key==`Name`].Value, `dev-webapp-asg-instance`)].[AutoScalingGroupName]' --output text)
+  #     - name: Start ASG Instance Refresh
+  #       id: refresh
+  #       run: |
+  #         ASG_NAME=$(aws autoscaling describe-auto-scaling-groups --query 'AutoScalingGroups[?contains(Tags[?Key==`Name`].Value, `dev-webapp-asg-instance`)].[AutoScalingGroupName]' --output text)
           
-          if [ -z "$ASG_NAME" ]; then
-            echo "No ASG found with Environment tag 'dev'"
-            exit 0 
-          fi
+  #         if [ -z "$ASG_NAME" ]; then
+  #           echo "No ASG found with Environment tag 'dev'"
+  #           exit 0 
+  #         fi
 
-          REFRESH_ID=$(aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name $ASG_NAME \
-            --preferences '{"MinHealthyPercentage": 90, "InstanceWarmup": 300}' \
-            --query 'InstanceRefreshId' --output text)
+  #         REFRESH_ID=$(aws autoscaling start-instance-refresh \
+  #           --auto-scaling-group-name $ASG_NAME \
+  #           --preferences '{"MinHealthyPercentage": 90, "InstanceWarmup": 300}' \
+  #           --query 'InstanceRefreshId' --output text)
           
-          echo "refresh_id=${REFRESH_ID}" >> $GITHUB_OUTPUT
-          echo "asg_name=${ASG_NAME}" >> $GITHUB_OUTPUT
+  #         echo "refresh_id=${REFRESH_ID}" >> $GITHUB_OUTPUT
+  #         echo "asg_name=${ASG_NAME}" >> $GITHUB_OUTPUT
 
-      - name: Wait for Instance Refresh
-        if: steps.refresh.outputs.refresh_id != ''
-        run: |
-          while true; do
-            STATUS=$(aws autoscaling describe-instance-refreshes \
-              --auto-scaling-group-name ${{ steps.refresh.outputs.asg_name }} \
-              --instance-refresh-ids ${{ steps.refresh.outputs.refresh_id }} \
-              --query 'InstanceRefreshes[0].Status' --output text)
+  #     - name: Wait for Instance Refresh
+  #       if: steps.refresh.outputs.refresh_id != ''
+  #       run: |
+  #         while true; do
+  #           STATUS=$(aws autoscaling describe-instance-refreshes \
+  #             --auto-scaling-group-name ${{ steps.refresh.outputs.asg_name }} \
+  #             --instance-refresh-ids ${{ steps.refresh.outputs.refresh_id }} \
+  #             --query 'InstanceRefreshes[0].Status' --output text)
             
-            echo "Instance refresh status: $STATUS"
+  #           echo "Instance refresh status: $STATUS"
             
-            if [ "$STATUS" = "Successful" ]; then
-              echo "Instance refresh completed successfully"
-              exit 0
-            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
-              echo "Instance refresh failed or was cancelled"
-              exit 1
-            fi
+  #           if [ "$STATUS" = "Successful" ]; then
+  #             echo "Instance refresh completed successfully"
+  #             exit 0
+  #           elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
+  #             echo "Instance refresh failed or was cancelled"
+  #             exit 1
+  #           fi
             
-            sleep 30
-          done
+  #           sleep 30
+  #         done
 
-  update_demo_asg:
-    needs: packer_build
-    name: Update Demo ASG
-    runs-on: ubuntu-latest
+  # update_demo_asg:
+  #   needs: packer_build
+  #   name: Update Demo ASG
+  #   runs-on: ubuntu-latest
 
-    steps:
-      - name: Configure AWS Demo credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEMO }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEMO }}
-          aws-region: ${{ secrets.REGION }}
+  #   steps:
+  #     - name: Configure AWS Demo credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_DEMO }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEMO }}
+  #         aws-region: ${{ secrets.REGION }}
 
-      - name: Create new Launch Template version
-        run: |
-          LAUNCH_TEMPLATE_ID=$(aws ec2 describe-launch-templates --filters Name=tag:Environment,Values=demo --query 'LaunchTemplates[0].LaunchTemplateId' --output text)
-          LATEST_VERSION=$(aws ec2 describe-launch-template-versions --launch-template-id $LAUNCH_TEMPLATE_ID --query 'sort_by(LaunchTemplateVersions, &VersionNumber)[-1]')
+  #     - name: Create new Launch Template version
+  #       run: |
+  #         LAUNCH_TEMPLATE_ID=$(aws ec2 describe-launch-templates --filters Name=tag:Environment,Values=demo --query 'LaunchTemplates[0].LaunchTemplateId' --output text)
+  #         LATEST_VERSION=$(aws ec2 describe-launch-template-versions --launch-template-id $LAUNCH_TEMPLATE_ID --query 'sort_by(LaunchTemplateVersions, &VersionNumber)[-1]')
           
-          if [ "$LAUNCH_TEMPLATE_ID" = "None" ] || -z "$LAUNCH_TEMPLATE_ID" ]; then
-            echo "No Launch Template found in Demo environment"
-            exit 0
-          fi
+  #         if [ "$LAUNCH_TEMPLATE_ID" = "None" ] || -z "$LAUNCH_TEMPLATE_ID" ]; then
+  #           echo "No Launch Template found in Demo environment"
+  #           exit 0
+  #         fi
 
-          NEW_VERSION=$(aws ec2 create-launch-template-version \
-            --launch-template-id $LAUNCH_TEMPLATE_ID \
-            --source-version '$Latest' \
-            --launch-template-data '{"ImageId":"${{ needs.packer_build.outputs.ami_id }}"}' \
-            --query 'LaunchTemplateVersion.VersionNumber' --output text)
+  #         NEW_VERSION=$(aws ec2 create-launch-template-version \
+  #           --launch-template-id $LAUNCH_TEMPLATE_ID \
+  #           --source-version '$Latest' \
+  #           --launch-template-data '{"ImageId":"${{ needs.packer_build.outputs.ami_id }}"}' \
+  #           --query 'LaunchTemplateVersion.VersionNumber' --output text)
           
-          echo "Created Launch Template version $NEW_VERSION"
+  #         echo "Created Launch Template version $NEW_VERSION"
 
-      - name: Start ASG Instance Refresh
-        id: refresh
-        run: |
-          ASG_NAME=$(aws autoscaling describe-auto-scaling-groups --query 'AutoScalingGroups[?contains(Tags[?Key==`Name`].Value, `demo-webapp-asg-instance`)].[AutoScalingGroupName]' --output text)
+  #     - name: Start ASG Instance Refresh
+  #       id: refresh
+  #       run: |
+  #         ASG_NAME=$(aws autoscaling describe-auto-scaling-groups --query 'AutoScalingGroups[?contains(Tags[?Key==`Name`].Value, `demo-webapp-asg-instance`)].[AutoScalingGroupName]' --output text)
           
-          if [ -z "$ASG_NAME" ]; then
-            echo "No ASG found in Demo environment"
-            exit 0
-          fi
+  #         if [ -z "$ASG_NAME" ]; then
+  #           echo "No ASG found in Demo environment"
+  #           exit 0
+  #         fi
 
-          REFRESH_ID=$(aws autoscaling start-instance-refresh \
-            --auto-scaling-group-name $ASG_NAME \
-            --preferences '{"MinHealthyPercentage": 90, "InstanceWarmup": 300}' \
-            --query 'InstanceRefreshId' --output text)
+  #         REFRESH_ID=$(aws autoscaling start-instance-refresh \
+  #           --auto-scaling-group-name $ASG_NAME \
+  #           --preferences '{"MinHealthyPercentage": 90, "InstanceWarmup": 300}' \
+  #           --query 'InstanceRefreshId' --output text)
           
-          echo "refresh_id=${REFRESH_ID}" >> $GITHUB_OUTPUT
-          echo "asg_name=${ASG_NAME}" >> $GITHUB_OUTPUT
+  #         echo "refresh_id=${REFRESH_ID}" >> $GITHUB_OUTPUT
+  #         echo "asg_name=${ASG_NAME}" >> $GITHUB_OUTPUT
 
-      - name: Wait for Instance Refresh
-        if: steps.refresh.outputs.refresh_id != ''
-        run: |
-          while true; do
-            STATUS=$(aws autoscaling describe-instance-refreshes \
-              --auto-scaling-group-name ${{ steps.refresh.outputs.asg_name }} \
-              --instance-refresh-ids ${{ steps.refresh.outputs.refresh_id }} \
-              --query 'InstanceRefreshes[0].Status' --output text)
+  #     - name: Wait for Instance Refresh
+  #       if: steps.refresh.outputs.refresh_id != ''
+  #       run: |
+  #         while true; do
+  #           STATUS=$(aws autoscaling describe-instance-refreshes \
+  #             --auto-scaling-group-name ${{ steps.refresh.outputs.asg_name }} \
+  #             --instance-refresh-ids ${{ steps.refresh.outputs.refresh_id }} \
+  #             --query 'InstanceRefreshes[0].Status' --output text)
             
-            echo "Instance refresh status: $STATUS"
+  #           echo "Instance refresh status: $STATUS"
             
-            if [ "$STATUS" = "Successful" ]; then
-              echo "Instance refresh completed successfully"
-              exit 0
-            elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
-              echo "Instance refresh failed or was cancelled"
-              exit 1
-            fi
+  #           if [ "$STATUS" = "Successful" ]; then
+  #             echo "Instance refresh completed successfully"
+  #             exit 0
+  #           elif [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
+  #             echo "Instance refresh failed or was cancelled"
+  #             exit 1
+  #           fi
             
-            sleep 30
-          done
+  #           sleep 30
+  #         done
