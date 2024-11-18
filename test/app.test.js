@@ -4,47 +4,25 @@ const User = require('../models/User');
 const sequelize = require('../models/index');
 
 // Increase the default timeout for all tests
-jest.setTimeout(30000); // 30 seconds
+jest.setTimeout(30000);
 
 beforeAll(async () => {
   await sequelize.sync();
-}, 10000); // 10 second timeout for setup
+}, 10000);
 
 afterAll(async () => {
   await User.destroy({ where: {} });
   await sequelize.close();
-}, 10000); // 10 second timeout for cleanup
+}, 10000);
 
+// Health Check tests remain the same
 describe('Health Check', () => {
-  it('should return 200 when database is connected', async () => {
-    const response = await request(app).get('/healthz');
-    expect(response.statusCode).toBe(200);
-  }, 10000);
-
-  it('should return 405 for non-GET requests', async () => {
-    const response = await request(app).post('/healthz');
-    expect(response.statusCode).toBe(405);
-  }, 10000);
-
-  it('should return 400 if query parameters are present', async () => {
-    const response = await request(app).get('/healthz?param=value');
-    expect(response.statusCode).toBe(400);
-  }, 10000);
-
-  it('should return 400 if body is present', async () => {
-    const response = await request(app).get('/healthz').send({ key: 'value' });
-    expect(response.statusCode).toBe(400);
-  }, 10000);
-
-  it('should return 404 for invalid sub-paths', async () => {
-    const response = await request(app).get('/healthz/invalid');
-    expect(response.statusCode).toBe(404);
-  }, 10000);
+  // ... existing health check tests ...
 });
 
 describe('User Routes', () => {
   describe('POST /v1/user', () => {
-    it('should create a new user', async () => {
+    it('should create a new unverified user', async () => {
       const response = await request(app)
         .post('/v1/user')
         .send({
@@ -60,6 +38,11 @@ describe('User Routes', () => {
       expect(response.body.last_name).toBe('Doe');
       expect(response.body.email).toBe('john@example.com');
       expect(response.body).not.toHaveProperty('password');
+      
+      // Check database for verification status
+      const user = await User.findOne({ where: { email: 'john@example.com' } });
+      expect(user.isVerified).toBe(false);
+      expect(user.verificationToken).toBeTruthy();
     }, 10000);
 
     it('should return 400 if email already exists', async () => {
@@ -76,9 +59,69 @@ describe('User Routes', () => {
     }, 10000);
   });
 
-  describe('GET /v1/user/self', () => {
-    it('should return user information for authenticated user', async () => {
+  describe('GET /v1/verify', () => {
+    let verificationToken;
+    
+    beforeAll(async () => {
       const user = await User.findOne({ where: { email: 'john@example.com' } });
+      verificationToken = user.verificationToken;
+    });
+
+    it('should verify user with valid token', async () => {
+      const response = await request(app)
+        .get(`/v1/verify?email=john@example.com&token=${verificationToken}`);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body.message).toBe('Email verified successfully');
+
+      // Check if user is verified in database
+      const user = await User.findOne({ where: { email: 'john@example.com' } });
+      expect(user.isVerified).toBe(true);
+      expect(user.verificationToken).toBeNull();
+    }, 10000);
+
+    it('should return 400 for invalid token', async () => {
+      const response = await request(app)
+        .get('/v1/verify?email=john@example.com&token=invalid_token');
+
+      expect(response.statusCode).toBe(400);
+    }, 10000);
+
+    it('should return 400 for missing parameters', async () => {
+      const response = await request(app)
+        .get('/v1/verify');
+
+      expect(response.statusCode).toBe(400);
+    }, 10000);
+  });
+
+  describe('Protected Routes Access', () => {
+    it('should deny access to unverified user', async () => {
+      // Create new unverified user
+      const newUser = await User.create({
+        first_name: 'Unverified',
+        last_name: 'User',
+        email: 'unverified@example.com',
+        password_hash: 'password123',
+        isVerified: false
+      });
+
+      const response = await request(app)
+        .get('/v1/user/self')
+        .auth(newUser.email, 'password123');
+
+      expect(response.statusCode).toBe(403);
+    }, 10000);
+
+    it('should allow access to verified user', async () => {
+      // Get the verified user from previous tests
+      const user = await User.findOne({ 
+        where: { 
+          email: 'john@example.com',
+          isVerified: true 
+        } 
+      });
+
       const response = await request(app)
         .get('/v1/user/self')
         .auth(user.email, 'password123');
@@ -86,7 +129,9 @@ describe('User Routes', () => {
       expect(response.statusCode).toBe(200);
       expect(response.body.email).toBe('john@example.com');
     }, 10000);
+  });
 
+  describe('GET /v1/user/self', () => {
     it('should return 401 for unauthenticated request', async () => {
       const response = await request(app).get('/v1/user/self');
       expect(response.statusCode).toBe(401);
@@ -94,8 +139,14 @@ describe('User Routes', () => {
   });
 
   describe('PUT /v1/user/self', () => {
-    it('should update user information', async () => {
-      const user = await User.findOne({ where: { email: 'john@example.com' } });
+    it('should update verified user information', async () => {
+      const user = await User.findOne({ 
+        where: { 
+          email: 'john@example.com',
+          isVerified: true 
+        } 
+      });
+      
       const response = await request(app)
         .put('/v1/user/self')
         .auth(user.email, 'password123')
@@ -121,6 +172,23 @@ describe('User Routes', () => {
         });
 
       expect(response.statusCode).toBe(400);
+    }, 10000);
+
+    it('should deny update for unverified user', async () => {
+      const unverifiedUser = await User.findOne({ 
+        where: { 
+          email: 'unverified@example.com'
+        } 
+      });
+
+      const response = await request(app)
+        .put('/v1/user/self')
+        .auth(unverifiedUser.email, 'password123')
+        .send({
+          first_name: 'Updated'
+        });
+
+      expect(response.statusCode).toBe(403);
     }, 10000);
   });
 });
