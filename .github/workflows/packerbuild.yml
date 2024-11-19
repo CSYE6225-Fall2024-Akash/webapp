@@ -195,7 +195,7 @@ jobs:
     - name: Start ASG Instance Refresh
       id: refresh
       run: |
-        ASG_NAME="${{ vars.AWS_PROFILE }-webapp-asg-instance"
+        ASG_NAME="${{vars.AWS_PROFILE}}-webapp-asg-instance"
         REFRESH_ID=$(aws autoscaling start-instance-refresh \
           --auto-scaling-group-name $ASG_NAME \
           --preferences "MinHealthyPercentage=90" \
