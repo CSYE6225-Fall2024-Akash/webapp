@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('./index');
+const sequelizeTokenify = require('sequelize-tokenify');
 
 const User = sequelize.define('User', {
     id: {
@@ -31,9 +32,32 @@ const User = sequelize.define('User', {
     account_updated: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW
+    },
+    isVerified: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    verificationToken: {
+        type: DataTypes.STRING,
+        unique: true
+    },
+    emailSentTimeStamp: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null
+    },
+    expiryTimeStamp: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null
     }
 }, {
     timestamps: false
+});
+
+sequelizeTokenify.tokenify(User, {
+    field: 'verificationToken',
+    length: 20
 });
 
 module.exports = User;

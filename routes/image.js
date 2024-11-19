@@ -3,6 +3,7 @@ const multer = require('multer');
 const AWS = require('aws-sdk');
 const path = require('path');
 const auth = require('../middleware/auth');
+const { checkVerification } = require('../middleware/verification');
 const Image = require('../models/Image');
 const metrics = require('../utils/metrics');
 const logger = require('../utils/logger');
@@ -29,7 +30,7 @@ const upload = multer({
 
 
 // Add profile picture
-router.post('/v1/user/self/pic', auth, upload.single('profilePic'), async (req, res) => {
+router.post('/v1/user/self/pic', auth, checkVerification, upload.single('profilePic'), async (req, res) => {
     const apiTimer = metrics.apiTimer('upload_profile_pic');
     metrics.incrementApiCall('upload_profile_pic');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');
@@ -100,7 +101,7 @@ router.post('/v1/user/self/pic', auth, upload.single('profilePic'), async (req, 
 });
 
 // Get profile picture
-router.get('/v1/user/self/pic', auth, async (req, res) => {
+router.get('/v1/user/self/pic', auth, checkVerification, async (req, res) => {
     const apiTimer = metrics.apiTimer('get_profile_pic');
     metrics.incrementApiCall('get_profile_pic');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate;');
@@ -147,7 +148,7 @@ router.get('/v1/user/self/pic', auth, async (req, res) => {
 });
 
 // Delete profile picture
-router.delete('/v1/user/self/pic', auth, async (req, res) => {
+router.delete('/v1/user/self/pic', auth, checkVerification, async (req, res) => {
     const apiTimer = metrics.apiTimer('delete_profile_pic');
     metrics.incrementApiCall('delete_profile_pic');
 
