@@ -6,6 +6,7 @@ const auth = require('../middleware/auth');
 const router = express.Router();
 const metrics = require('../utils/metrics');
 const logger = require('../utils/logger');
+const crypto = require('crypto');
 
 
 AWS.config.update({
