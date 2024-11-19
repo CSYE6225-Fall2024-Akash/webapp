@@ -57,7 +57,7 @@ const User = sequelize.define('User', {
 
 sequelizeTokenify.tokenify(User, {
     field: 'verificationToken',
-    length: 40
+    length: 20
 });
 
 module.exports = User;

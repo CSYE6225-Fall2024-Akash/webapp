@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const AWS = require('aws-sdk');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { checkVerification } = require('../middleware/verification');
 const router = express.Router();
 const metrics = require('../utils/metrics');
 const logger = require('../utils/logger');
@@ -183,7 +184,7 @@ router.get('/v1/verify', async (req, res) => {
 
 
 // Get user information (authenticated route)
-router.get('/v1/user/self', auth, async (req, res) => {
+router.get('/v1/user/self', auth, checkVerification, async (req, res) => {
     const apiTimer = metrics.apiTimer('get_user');
     metrics.incrementApiCall('get_user');
 
@@ -211,7 +212,7 @@ router.get('/v1/user/self', auth, async (req, res) => {
 });
 
 // Update user information (authenticated route)
-router.put('/v1/user/self', auth, async (req, res) => {
+router.put('/v1/user/self', auth, checkVerification, async (req, res) => {
     const apiTimer = metrics.apiTimer('update_user');
     metrics.incrementApiCall('update_user');
 

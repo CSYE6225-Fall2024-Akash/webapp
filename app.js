@@ -53,8 +53,6 @@ app.use('/healthz', async (req, res) => {
     }
 });
 
-app.use(checkVerification);
-
 app.use(userRoutes);
 app.use(imageRoutes);
 
