@@ -171,7 +171,7 @@ router.get('/v1/verify', async (req, res) => {
             expiryTimeStamp: null
         });
 
-        logger.info('Email verified successfully', { email: user.email });
+        logger.info('Email verified successfully');
         apiTimer.end();
         return res.status(200).json({ message: 'Email verified successfully' });
     } catch (error) {
