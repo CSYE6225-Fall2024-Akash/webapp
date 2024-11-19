@@ -132,24 +132,23 @@ router.get('/v1/verify', async (req, res) => {
     logger.info('Email verification attempt');
     
     try {
-        const { email, token } = req.query;
+        const { token } = req.query;
         
-        if (!email || !token) {
-            logger.warn('Verification failed: Missing email or token');
+        if (!token) {
+            logger.warn('Verification failed: Missing token');
             apiTimer.end();
             return res.status(400).send();
         }
 
-        // Find user by email and verification token
+        // Find user by verification token
         const user = await User.findOne({
             where: { 
-                email: email,
                 verificationToken: token
             }
         });
 
         if (!user) {
-            logger.warn('Verification failed: Invalid email or token');
+            logger.warn('Verification failed: Invalid token');
             apiTimer.end();
             return res.status(400).send();
         }
@@ -172,7 +171,7 @@ router.get('/v1/verify', async (req, res) => {
             expiryTimeStamp: null
         });
 
-        logger.info('Email verified successfully', { email: user.email });
+        logger.info('Email verified successfully');
         apiTimer.end();
         return res.status(200).json({ message: 'Email verified successfully' });
     } catch (error) {
