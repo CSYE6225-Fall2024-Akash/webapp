@@ -86,4 +86,3 @@ sudo systemctl enable app.service
 
 
 echo "Application setup completed"
-

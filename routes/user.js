@@ -92,7 +92,7 @@ router.post('/v1/user', async (req, res) => {
             email: user.email,
             accountCreated: user.account_created,
             verificationToken: verificationToken,
-            verificationUrl: `http://${process.env.DOMAIN_NAME}/v1/verify?email=${encodeURIComponent(email)}&token=${verificationToken}`
+            verificationUrl: `http://${process.env.DOMAIN_NAME}/v1/verify?token=${verificationToken}`
         };
 
         await sns.publish({
