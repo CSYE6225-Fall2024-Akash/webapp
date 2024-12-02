@@ -7,6 +7,15 @@ sudo apt-get upgrade -y
 
 sudo apt install unzip -y
 
+
+# Install AWS CLI
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+
+# Install jq
+sudo apt-get install jq -y
+
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt install -y nodejs
 
