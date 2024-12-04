@@ -183,7 +183,7 @@ router.get('/v1/verify', async (req, res) => {
 
 
 // Get user information (authenticated route)
-router.get('/v1/user/self', auth, checkVerification, async (req, res) => {
+router.get('/v2/user/self', auth, checkVerification, async (req, res) => {
     const apiTimer = metrics.apiTimer('get_user');
     metrics.incrementApiCall('get_user');
 
